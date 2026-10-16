@@ -2,9 +2,6 @@
 
 *Updated 16-10-2026*
 
-Sir, apologies for the late update. We had to work through a lot before finalising the denoising pipeline,
-and some parts turned out trickier than expected. Here is our progress.
-
 Depth cameras like the Kinect give a distance for every pixel, but the images are noisy: some distances are
 wrong and some pixels have no value at all. Since we want to use these images for camera tracking (ICP), our
 first task was to clean them.
