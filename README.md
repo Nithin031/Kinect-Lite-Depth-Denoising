@@ -134,7 +134,7 @@ ICL-NUIM datasets). To try other methods, add `--filter` (for example `median` o
 | `RESULTS/` | the main pictures, a results table and two 3D viewers |
 | `outputs/` | all measured numbers and every figure |
 | `experiments/` | the test setups that were run |
-| `docs/reports/` | full write-ups (PDF): start with `4_Final_Report.pdf` |
+| `docs/` | [`PIPELINE.md`](docs/PIPELINE.md): method and all results · [`PROGRESS_REPORT.md`](docs/PROGRESS_REPORT.md): progress update · [`REFERENCES.md`](docs/REFERENCES.md) |
 
 
 ## Limits
@@ -145,10 +145,17 @@ ICL-NUIM datasets). To try other methods, add `--filter` (for example `median` o
 - It takes about 0.35 s per frame in Python, so it is not real-time yet.
 
 
-## Next step
+## Project status
 
-Use the cleaned depth images to track how the camera moves (ICP), and check against the camera's known
-path in the TUM dataset whether the cleaning makes tracking more accurate.
+**Phase 1, cleaning the depth images: done.** The full method and every result are in
+[`docs/PIPELINE.md`](docs/PIPELINE.md); the latest progress update is [`docs/PROGRESS_REPORT.md`](docs/PROGRESS_REPORT.md).
+
+We also tried **temporal filtering** (averaging several aligned frames). It did not help: the results stayed
+about the same as with spatial filtering alone, and were worse in some cases. So we dropped it and kept only
+the spatial pipeline.
+
+**Phase 2, ICP: next.** Use the cleaned depth images to track how the camera moves, and check against the
+camera's known path in the TUM dataset whether cleaning makes tracking more accurate.
 
 
 <details>

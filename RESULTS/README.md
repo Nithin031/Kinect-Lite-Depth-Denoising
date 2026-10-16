@@ -49,6 +49,6 @@ Error = mean absolute difference from the true depth. Lower is better.
 
 
 ## More detail
-- Full write-ups in `docs/reports/` (PDF and Word): theory to results, the results with all charts, and a project guide.
+- The full method and results: `docs/PIPELINE.md`; the progress update: `docs/PROGRESS_REPORT.md`.
 - Every run's raw numbers: `outputs/<run name>/summary.csv`
 - Rebuild this folder: `.venv\Scripts\python.exe denoise\make_results.py`
