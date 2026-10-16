@@ -1,0 +1,10 @@
+{"name": "pipeline_tum",
+ "_doc": "Initial pipeline (noisy -> denoised -> restored): denoising filter, then hole filling. All with the 0.4 m gate, tuned filter settings from eval_selected.",
+ "dataset": "tum", "frames": "25:2509:50",
+ "configs": [
+  {"method": "pipeline", "params": {"filter": "iamedian", "k": 9}, "grid": {"fill": ["none", "region", "fmm", "ns"]}, "min_depth_m": 0.4},
+  {"method": "pipeline", "params": {"filter": "iamedian", "k": 9, "fill": "fmm", "fill_max_hole_area": 1024}, "min_depth_m": 0.4},
+  {"method": "pipeline", "params": {"filter": "gaussian_masked", "sigma_px": 1.5, "fill": "fmm"}, "min_depth_m": 0.4},
+  {"method": "pipeline", "params": {"filter": "bilateral_cv2", "d": 15, "sigma_space_px": 10, "sigma_range_m": 0.3, "fill": "fmm"}, "min_depth_m": 0.4},
+  {"method": "pipeline", "params": {"filter": "none", "fill": "fmm"}, "min_depth_m": 0.4}
+ ]}

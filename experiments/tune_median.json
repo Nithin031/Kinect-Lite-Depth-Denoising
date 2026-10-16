@@ -1,0 +1,2 @@
+{"name": "tune_median", "_doc": "Tuning split (frames 0:1509:50). Plain median, holes enter as 0 m.", "dataset": "icl", "frames": "0:1509:50",
+ "configs": [{"method": "median", "grid": {"k": [3, 5, 7, 9, 11]}, "min_depth_m": [null, 0.4]}]}

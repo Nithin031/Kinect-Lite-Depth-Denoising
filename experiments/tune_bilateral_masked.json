@@ -1,0 +1,2 @@
+{"name": "tune_bilateral_masked", "_doc": "Tuning split (frames 0:1509:50). d x sigma_space x sigma_range grid.", "dataset": "icl", "frames": "0:1509:50",
+ "configs": [{"method": "bilateral_masked", "grid": {"d": [5, 9, 15], "sigma_space_px": [2, 5, 10], "sigma_range_m": [0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 0.3, 1.0]}, "min_depth_m": [null, 0.4]}]}

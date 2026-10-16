@@ -1,0 +1,20 @@
+metric (weighted by outside px per frame),value
+outside_below_window_min_pct,99.94200852222586
+outside_above_window_max_pct,0.057991477774135804
+outside_err_mean_mm,-1010.0554031789346
+outside_abs_err_median_mm,972.6559948787149
+outside_abs_err_p90_mm,1795.2164772379756
+outside_gt_depth_median_m,2.322931219037267
+outside_raw_depth_median_m,1.2460232492914745
+outside_within_10px_of_border_pct,5.26461763445198
+outside_within_2px_of_raw_hole_pct,1.0993167091097047
+outside_within_5px_of_raw_hole_pct,3.2891253372330502
+outside_inside_range_win7_pct,0.9972012808552482
+outside_inside_range_win11_pct,2.4457275409092056
+outside_inside_range_win21_pct,5.304959532033988
+outside_match_gt_within_10px_3cm_pct,2.776026827361892
+frames,30.0
+outside_px_total,79322.0
+bad_px_total,112568.0
+outside_pct_of_bad,70.46585175183
+allsel_within_2px_of_raw_hole_pct,1.5935136337287148

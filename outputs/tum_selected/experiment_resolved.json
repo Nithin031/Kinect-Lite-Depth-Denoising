@@ -1,0 +1,262 @@
+{
+ "source": "experiments\\tum_selected.json",
+ "command": "denoise/run.py experiments/tum_selected.json --workers 4",
+ "dataset": "tum",
+ "frames": [
+  25,
+  75,
+  125,
+  175,
+  225,
+  275,
+  325,
+  375,
+  425,
+  475,
+  525,
+  575,
+  625,
+  675,
+  725,
+  775,
+  825,
+  875,
+  925,
+  975,
+  1025,
+  1075,
+  1125,
+  1175,
+  1225,
+  1275,
+  1325,
+  1375,
+  1425,
+  1475,
+  1525,
+  1575,
+  1625,
+  1675,
+  1725,
+  1775,
+  1825,
+  1875,
+  1925,
+  1975,
+  2025,
+  2075,
+  2125,
+  2175,
+  2225,
+  2275,
+  2325,
+  2375,
+  2425,
+  2475
+ ],
+ "workers": 4,
+ "configs": [
+  {
+   "id": "raw",
+   "method": "raw",
+   "params": {},
+   "min_depth_m": null
+  },
+  {
+   "id": "median_k11",
+   "method": "median",
+   "params": {
+    "k": 11
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "median_k11_gate0.4",
+   "method": "median",
+   "params": {
+    "k": 11
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "iamedian_k11",
+   "method": "iamedian",
+   "params": {
+    "k": 11
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "iamedian_k9_gate0.4",
+   "method": "iamedian",
+   "params": {
+    "k": 9
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "gaussian_cv2_s0.5",
+   "method": "gaussian_cv2",
+   "params": {
+    "sigma_px": 0.5
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_cv2_s0.5_gate0.4",
+   "method": "gaussian_cv2",
+   "params": {
+    "sigma_px": 0.5
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "gaussian_masked_s0.5",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 0.5
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s1.5_gate0.4",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 1.5
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "bilateral_cv2_d15_s5_r0.3",
+   "method": "bilateral_cv2",
+   "params": {
+    "d": 15,
+    "sigma_space_px": 5,
+    "sigma_range_m": 0.3
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "bilateral_cv2_d15_s10_r0.3_gate0.4",
+   "method": "bilateral_cv2",
+   "params": {
+    "d": 15,
+    "sigma_space_px": 10,
+    "sigma_range_m": 0.3
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "bilateral_masked_d15_s5_r1",
+   "method": "bilateral_masked",
+   "params": {
+    "d": 15,
+    "sigma_space_px": 5,
+    "sigma_range_m": 1.0
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "bilateral_masked_d15_s10_r1_gate0.4",
+   "method": "bilateral_masked",
+   "params": {
+    "d": 15,
+    "sigma_space_px": 10,
+    "sigma_range_m": 1.0
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "median_k5",
+   "method": "median",
+   "params": {
+    "k": 5
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "median_k5_gate0.4",
+   "method": "median",
+   "params": {
+    "k": 5
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "iamedian_k5",
+   "method": "iamedian",
+   "params": {
+    "k": 5
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "iamedian_k5_gate0.4",
+   "method": "iamedian",
+   "params": {
+    "k": 5
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "bilateral_cv2_d9_s5_r0.03",
+   "method": "bilateral_cv2",
+   "params": {
+    "d": 9,
+    "sigma_space_px": 5,
+    "sigma_range_m": 0.03
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "bilateral_cv2_d9_s5_r0.03_gate0.4",
+   "method": "bilateral_cv2",
+   "params": {
+    "d": 9,
+    "sigma_space_px": 5,
+    "sigma_range_m": 0.03
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "bilateral_masked_d9_s5_r0.03",
+   "method": "bilateral_masked",
+   "params": {
+    "d": 9,
+    "sigma_space_px": 5,
+    "sigma_range_m": 0.03
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "bilateral_masked_d9_s5_r0.03_gate0.4",
+   "method": "bilateral_masked",
+   "params": {
+    "d": 9,
+    "sigma_space_px": 5,
+    "sigma_range_m": 0.03
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "hole_fill_k5_a1024_g0.1",
+   "method": "hole_fill",
+   "params": {
+    "k": 5,
+    "max_hole_area": 1024,
+    "edge_guard_m": 0.1
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "hole_fill_k5_a1024_g0.1_gate0.4",
+   "method": "hole_fill",
+   "params": {
+    "k": 5,
+    "max_hole_area": 1024,
+    "edge_guard_m": 0.1
+   },
+   "min_depth_m": 0.4
+  }
+ ]
+}

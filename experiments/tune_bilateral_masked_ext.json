@@ -1,0 +1,2 @@
+{"name": "tune_bilateral_masked_ext", "_doc": "Tuning split (frames 0:1509:50). Extension of tune_bilateral_masked: its minima sat on the grid edge (d 15, and sigma_range 1.0 m for masked). Overlaps the first grid at d15/s5,s10/r0.3,r1 as a consistency check.", "dataset": "icl", "frames": "0:1509:50",
+ "configs": [{"method": "bilateral_masked", "grid": {"d": [15, 21, 31], "sigma_space_px": [5, 10, 20], "sigma_range_m": [0.3, 1.0, 3.0, 10.0]}, "min_depth_m": [null, 0.4]}]}

@@ -1,0 +1,128 @@
+{
+ "source": "experiments\\pipeline_icl.json",
+ "command": "denoise/run.py experiments/pipeline_icl.json --workers 4",
+ "dataset": "icl",
+ "frames": [
+  25,
+  75,
+  125,
+  175,
+  225,
+  275,
+  325,
+  375,
+  425,
+  475,
+  525,
+  575,
+  625,
+  675,
+  725,
+  775,
+  825,
+  875,
+  925,
+  975,
+  1025,
+  1075,
+  1125,
+  1175,
+  1225,
+  1275,
+  1325,
+  1375,
+  1425,
+  1475
+ ],
+ "workers": 4,
+ "configs": [
+  {
+   "id": "raw",
+   "method": "raw",
+   "params": {},
+   "min_depth_m": null
+  },
+  {
+   "id": "pipeline_iamedian_k9_fillnone_gate0.4",
+   "method": "pipeline",
+   "params": {
+    "filter": "iamedian",
+    "k": 9,
+    "fill": "none"
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "pipeline_iamedian_k9_fillregion_gate0.4",
+   "method": "pipeline",
+   "params": {
+    "filter": "iamedian",
+    "k": 9,
+    "fill": "region"
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "pipeline_iamedian_k9_fillfmm_gate0.4",
+   "method": "pipeline",
+   "params": {
+    "filter": "iamedian",
+    "k": 9,
+    "fill": "fmm"
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "pipeline_iamedian_k9_fillns_gate0.4",
+   "method": "pipeline",
+   "params": {
+    "filter": "iamedian",
+    "k": 9,
+    "fill": "ns"
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "pipeline_iamedian_k9_fillfmm_fa1024_gate0.4",
+   "method": "pipeline",
+   "params": {
+    "filter": "iamedian",
+    "k": 9,
+    "fill": "fmm",
+    "fill_max_hole_area": 1024
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "pipeline_gaussian_masked_s1.5_fillfmm_gate0.4",
+   "method": "pipeline",
+   "params": {
+    "filter": "gaussian_masked",
+    "sigma_px": 1.5,
+    "fill": "fmm"
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "pipeline_bilateral_cv2_d15_s10_r0.3_fillfmm_gate0.4",
+   "method": "pipeline",
+   "params": {
+    "filter": "bilateral_cv2",
+    "d": 15,
+    "sigma_space_px": 10,
+    "sigma_range_m": 0.3,
+    "fill": "fmm"
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "pipeline_none_fillfmm_gate0.4",
+   "method": "pipeline",
+   "params": {
+    "filter": "none",
+    "fill": "fmm"
+   },
+   "min_depth_m": 0.4
+  }
+ ]
+}

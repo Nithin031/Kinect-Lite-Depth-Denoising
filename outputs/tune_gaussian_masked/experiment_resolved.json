@@ -1,0 +1,159 @@
+{
+ "source": "experiments\\tune_gaussian_masked.json",
+ "command": "denoise/run.py experiments/tune_gaussian_masked.json --workers 6",
+ "dataset": "icl",
+ "frames": [
+  0,
+  50,
+  100,
+  150,
+  200,
+  250,
+  300,
+  350,
+  400,
+  450,
+  500,
+  550,
+  600,
+  650,
+  700,
+  750,
+  800,
+  850,
+  900,
+  950,
+  1000,
+  1050,
+  1100,
+  1150,
+  1200,
+  1250,
+  1300,
+  1350,
+  1400,
+  1450,
+  1500
+ ],
+ "workers": 6,
+ "configs": [
+  {
+   "id": "raw",
+   "method": "raw",
+   "params": {},
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s0.5",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 0.5
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s0.5_gate0.4",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 0.5
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "gaussian_masked_s0.75",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 0.75
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s0.75_gate0.4",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 0.75
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "gaussian_masked_s1",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 1
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s1_gate0.4",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 1
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "gaussian_masked_s1.5",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 1.5
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s1.5_gate0.4",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 1.5
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "gaussian_masked_s2",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 2
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s2_gate0.4",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 2
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "gaussian_masked_s3",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 3
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s3_gate0.4",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 3
+   },
+   "min_depth_m": 0.4
+  },
+  {
+   "id": "gaussian_masked_s5",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 5
+   },
+   "min_depth_m": null
+  },
+  {
+   "id": "gaussian_masked_s5_gate0.4",
+   "method": "gaussian_masked",
+   "params": {
+    "sigma_px": 5
+   },
+   "min_depth_m": 0.4
+  }
+ ]
+}

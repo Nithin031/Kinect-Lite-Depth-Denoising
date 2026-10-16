@@ -1,0 +1,13 @@
+config,tune_all_rel_raw_pct,eval_all_rel_raw_pct,tune_flat_rel_raw_pct,eval_flat_rel_raw_pct
+median_k11,-46.519,-43.492,-29.34,-23.107
+median_k11_gate0.4,-46.519,-43.492,-29.34,-23.107
+iamedian_k11,-49.349,-49.022,-35.989,-33.342
+iamedian_k9_gate0.4,-51.618,-50.952,-37.714,-34.801
+gaussian_cv2_s0.5,0.918,-0.773,4.684,2.05
+gaussian_cv2_s0.5_gate0.4,1.428,-0.349,5.316,2.574
+gaussian_masked_s0.5,-2.811,-3.749,-2.249,-3.612
+gaussian_masked_s1.5_gate0.4,-10.33,-9.599,-12.786,-11.637
+bilateral_cv2_d15_s5_r0.3,-9.823,-10.439,-12.903,-13.673
+bilateral_cv2_d15_s10_r0.3_gate0.4,-10.198,-10.756,-13.432,-14.104
+bilateral_masked_d15_s5_r1,-12.504,-12.461,-10.028,-9.562
+bilateral_masked_d15_s10_r1_gate0.4,-19.148,-17.785,-19.948,-17.799

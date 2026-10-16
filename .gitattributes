@@ -1,0 +1,8 @@
+# Normalise line endings in the repository; check out text files with the platform's endings.
+* text=auto
+
+# Binary files: never touch
+*.png  binary
+*.pdf  binary
+*.docx binary
+*.npy  binary

@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------------------
+# Datasets (download separately; see README.md "Data")
+# ---------------------------------------------------------------------------
+ICL NUIM/
+RGB TUM/
+*.tgz
+*.tar.gz
+*.part
+*.bag
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# Large or regenerable outputs
+# ---------------------------------------------------------------------------
+# filtered depth frames saved with run.py --save-frames (~90 MB per run)
+outputs/*/frames/
+*.npy
+*.log
+
+# ---------------------------------------------------------------------------
+# Personal working files
+# ---------------------------------------------------------------------------
+CHECKPOINT_SPATIAL.md
+
+# ---------------------------------------------------------------------------
+# Editors and OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# restored depth PNGs written by pipeline.py (regenerable)
+outputs/pipeline/*_restored.png
+
+# process.py outputs (regenerable): restored frames, videos, 3D viewers
+outputs/process/*/restored/
+outputs/process/*/*.mp4
+outputs/process/*/*.html
+
+# code-only package for sharing (built from the repository)
+kinect_lite_pipeline.zip

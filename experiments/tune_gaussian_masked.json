@@ -1,0 +1,2 @@
+{"name": "tune_gaussian_masked", "_doc": "Tuning split (frames 0:1509:50). Gaussian, kernel 2*ceil(3 sigma)+1. Added 2026-10-16 on request (not in the original run).", "dataset": "icl", "frames": "0:1509:50",
+ "configs": [{"method": "gaussian_masked", "grid": {"sigma_px": [0.5, 0.75, 1, 1.5, 2, 3, 5]}, "min_depth_m": [null, 0.4]}]}
