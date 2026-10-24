@@ -49,3 +49,6 @@ outputs/process/*/*.html
 
 # code-only package for sharing (built from the repository)
 kinect_lite_pipeline.zip
+
+# personal copy of the progress update for the shared Google Doc
+progress_update.txt
