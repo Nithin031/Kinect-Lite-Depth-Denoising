@@ -26,7 +26,8 @@ raw depth ──► cleaner (none / median / paper) ──► cleaned depth ─�
 RGB image (unchanged, same for every method) ────────────────────┴► RGB-D odometry ──► camera path vs. true path
 ```
 
-**Full report:** [`results.pdf`](results.pdf) (source: [`report/report.tex`](report/report.tex))
+**All results (tables + figures only):** [`results.pdf`](results.pdf) (source: [`report/results.tex`](report/results.tex)).
+Full write-up with explanations: [`report/report.tex`](report/report.tex).
 
 
 ## Data and metrics
@@ -135,6 +136,36 @@ not hold on ICL (15.36 vs 14.94 cm), so we do not count it.
 | filled depth for display | median + Navier–Stokes or nearest | about 4× more accurate than Telea; do not feed it to the tracker |
 
 
+## Common questions
+
+All six cleaner + tracker combinations, ATE in cm, sorted by the real-sensor (TUM) result:
+
+| cleaner | tracker | TUM (real) | ICL (synthetic) |
+|---|---|---|---|
+| **median 9×9 (ours)** | RGB-D odometry | **2.08** | 0.98 |
+| paper (Fu et al.) | RGB-D odometry | 2.10 | 26.07 |
+| no cleaning | RGB-D odometry | 2.14 | 23.59 |
+| paper (Fu et al.) | depth-only ICP | 3.33 | **0.95** |
+| median 9×9 (ours) | depth-only ICP | 13.32 | 14.94 |
+| no cleaning | depth-only ICP | 13.97 | 17.07 |
+
+- **Does either cleaner use the RGB image?** No. Both are depth-only. The RGB image goes unchanged to the RGB-D
+  tracker, the same for every method, so only the cleaned depth differs.
+- **Then why test with an RGB-D tracker?** Real systems use both kinds of tracker, and the best cleaner flips between
+  them. With only ICP we'd conclude "the median barely helps"; with only RGB-D, "the paper makes things worse". Both
+  are true, each for its own tracker.
+- **Isn't depth alone enough?** Only with very clean depth. With ICL's perfect depth, ICP is best (0.19 cm). On real
+  TUM data the best depth-only result is 3.33 cm and needs the 26-minute pipeline; RGB-D gets 2.08 cm with the median.
+  Depth-only also can't measure motion along flat walls or floors, and TUM is still 16 % holes after cleaning.
+- **Isn't the depth-only error lower than ours?** Paper + ICP vs. median + RGB-D: 0.95 vs 0.98 cm on ICL (a tie,
+  within noise) and 3.33 vs 2.08 cm on TUM (RGB-D wins). But median + depth-only ICP is poor (13–15 cm): the median
+  doesn't suit a depth-only tracker.
+- **RGB-D "ICP"?** No: RGB-D odometry is not ICP. ICP aligns 3D points using depth only; RGB-D odometry aligns the
+  images using colour and depth.
+
+Full answers: section 4 of the write-up, [`report/report.tex`](report/report.tex).
+
+
 ## Run it
 
 ```
@@ -142,7 +173,7 @@ pip install -r requirements.txt                              # Python 3.12
 python src/icl_compare.py --start 1 --frames 300 --step 2   # ICL: depth error + both trackers
 python src/tum_compare.py --start 0 --frames 300 --step 2   # TUM: both trackers (slow; ran on Kaggle, see kaggle/PUSH.md)
 python experiments/hole_filling/compare_fills.py --frames 300 --step 2   # hole-filling comparison (slow)
-cd report; pdflatex report.tex; pdflatex report.tex          # rebuild the report, then copy report.pdf to ../results.pdf
+cd report; pdflatex results.tex; pdflatex results.tex        # rebuild results.pdf, then copy it to ../results.pdf
 ```
 
 Datasets are not included. Download them into this folder:
@@ -159,8 +190,8 @@ All numbers above are in `src/results/icl_compare.txt`, `src/results/tum_compare
 | `src/` | the code: `clean.py` (ours), `paper_pipeline.py` (the paper), `icl_compare.py` / `tum_compare.py` (the experiments), `plot_paths.py` (path figures); `results/` holds all numbers and figures |
 | `experiments/` | the hole-filling comparison, the earlier filter study that chose the median, and our first versions of the paper pipeline |
 | `kaggle/` | scripts for the slow runs on Kaggle |
-| `report/` | LaTeX source of the report (`report.tex`) |
-| `results.pdf` | the full report |
+| `report/` | LaTeX sources: `results.tex` (builds `results.pdf`) and `report.tex` (full write-up) |
+| `results.pdf` | all results: tables and figures, each table labelled with its source file |
 
 
 ## Credits
