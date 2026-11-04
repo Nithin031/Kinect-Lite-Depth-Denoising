@@ -2,7 +2,7 @@
 
 Kinect-style depth cameras give a distance for every pixel, but two kinds of error get in the way:
 **spikes** (pixels with a wildly wrong distance) and **holes** (pixels with no distance at all). This project
-cleans the depth images and measures whether the cleaning makes **camera tracking** more accurate.
+cleans the depth images and measures whether the cleaning makes **depth-only ICP camera tracking** more accurate.
 
 We compare two cleaners:
 
@@ -11,23 +11,19 @@ We compare two cleaners:
 | **ours: 9×9 median** | `src/clean.py` | depth below 0.4 m becomes a hole; then each pixel is replaced by the median of the measured pixels in its 9×9 window. One frame at a time. | under 1 min |
 | **paper: Fu et al. (2012)** | `src/paper_pipeline.py` | predicts hole values from the 2 frames before and after (block matching), then smooths with a spatial-temporal bilateral filter (ST-DNBL). | about 26 min |
 
-Each cleaned sequence is fed to two trackers, and the estimated camera path is compared with the true one:
-- **depth-only ICP**: aligns consecutive 3D point clouds (Open3D point-to-plane ICP). Uses depth only.
-- **RGB-D odometry**: aligns consecutive frames using colour and depth together (Open3D hybrid odometry).
+Each cleaned sequence is fed to a **depth-only ICP** tracker, and the estimated camera path is compared with the true one.
+The tracker aligns consecutive 3D point clouds with Open3D point-to-plane ICP (coarse to fine, voxels 4/2/1 cm, pairs
+farther apart than 10/5/2 cm are dropped). It uses the depth only, so the only thing that changes between rows of the
+results is the cleaned depth. Neither cleaner uses the colour image.
 
-> **Neither cleaner uses the colour image.** Fu et al. is a depth-only method, and so is our median. The RGB image
-> is used only by the RGB-D tracker, *after* cleaning, and it is the same unmodified image for every method. So the
-> only thing that changes between rows of the results is the cleaned depth. We test with both trackers because real
-> systems use both kinds, and the best cleaner turns out to be different for each.
+> **ICP variants:** the main results use point-to-plane ICP. Point-to-point (the SVD-based variant in the proposal), a
+> robust point-to-plane and generalized ICP are compared in section 3.
 
 ```
 raw depth ──► cleaner (none / median / paper) ──► cleaned depth ──► depth-only ICP ──► camera path vs. true path
-                                                  cleaned depth ─┐
-RGB image (unchanged, same for every method) ────────────────────┴► RGB-D odometry ──► camera path vs. true path
 ```
 
-**All results (tables + figures only):** [`results.pdf`](results.pdf) (source: [`report/results.tex`](report/results.tex)).
-Full write-up with explanations: [`report/report.tex`](report/report.tex).
+**Older summary:** [`results.pdf`](results.pdf) was built before this restructuring and is out of date.
 
 
 ## Data and metrics
@@ -61,126 +57,165 @@ For scale: on ICL the camera moves 6.5 mm per tracked step (0.97 m total), on TU
 **Our median halves the depth error; the paper barely changes it.** The ICL noise is dominated by spikes, which
 is why the input's RMSE (187 mm) is almost 5× its MAE. A median simply votes spikes out (RMSE drops to 55 mm), and
 it improves every one of the 300 frames. The paper's bilateral filter weights each neighbour by how similar its
-depth is to the centre pixel, so a spike only averages with itself and survives (RMSE stays at 186 mm). The
-paper's output is smoother, but its error grows with distance, so fewer pixels land within 1 cm.
+depth is to the centre pixel, so a spike only averages with itself and survives (RMSE stays at 186 mm).
 
 <img src="src/results/icl_depth_example.png" alt="Depth (top) and error (bottom) per method on ICL frame 151" width="100%">
 
 *One ICL frame: cleaned depth (top) and error against the true depth (bottom, brighter = worse). The median removes
 the speckled spikes; the paper's output keeps them.*
 
-### 2. Camera tracking
+### 2. Camera tracking with depth-only ICP
 
 ATE in cm / RPE in mm, 150 tracked frames. Bold = best per column (excluding the true-depth reference).
 
-| method | ICL, depth-only ICP | ICL, RGB-D odometry | TUM, depth-only ICP | TUM, RGB-D odometry |
-|---|---|---|---|---|
-| *true depth (best possible)* | *0.19 / 0.07* | *0.81 / 2.18* | – | – |
-| no cleaning (input) | 17.07 / 14.43 | 23.59 / 24.20 | 13.97 / 11.69 | 2.14 / **5.61** |
-| **median 9×9 (ours)** | 14.94 / 11.78 | **0.98 / 1.59** | 13.32 / 10.86 | **2.08** / 5.69 |
-| paper (Fu et al.) | **0.95 / 2.02** | 26.0 / 21.76 | **3.31 / 4.37** | 2.10 / 5.80 |
+| method | ICL | TUM |
+|---|---|---|
+| *true depth (best possible)* | *0.19 / 0.07* | – |
+| no cleaning (input) | 17.07 / 14.43 | 13.97 / 11.69 |
+| median 9×9 (ours) | 14.94 / 11.78 | 13.32 / 10.86 |
+| **paper (Fu et al.)** | **0.95 / 2.02** | **3.33 / 4.37** |
 
-**Depth-only ICP: the paper wins clearly** (drift 0.95 vs 14.94 cm on ICL, 3.31 vs 13.32 cm on TUM, i.e. 4–16×
-less). Point-to-plane ICP throws away far-off point matches, so the spikes the paper leaves cost little, but it
-relies on surface normals. The paper's smoothing gives clean surfaces and good normals; the median leaves the
-sensor's striped error pattern, which biases every alignment step slightly and adds up to drift. On ICL the median
-barely improves on the raw input here (14.94 vs 17.07 cm).
+**The paper wins clearly** (drift 0.95 vs 14.94 cm on ICL, 3.33 vs 13.32 cm on TUM, i.e. 4–16× less). The median
+barely improves on the raw input (14.94 vs 17.07 cm on ICL, 13.32 vs 13.97 cm on TUM). On ICL the median's error per
+step (11.78 mm) is larger than the camera's motion per step (6.5 mm), so its tracking is mostly noise.
 
-**RGB-D odometry: our median wins.** On ICL it reaches 0.98 cm, close to the 0.81 cm that the true depth gives,
-while the paper fails (26.0 cm, worse than no cleaning). RGB-D odometry projects every pixel using its depth, so
-each surviving spike drags the alignment: with the paper's output, 49 of 149 steps are off by more than 20 mm,
-with the median none. On TUM all methods are within 0.06 cm of each other (2.08–2.14 cm): the real sensor's noise is
-less spike-heavy than ICL's simulated noise, so cleaning matters less there.
+**Depth accuracy does not predict tracking accuracy.** The paper has the *worse* per-pixel depth error (MAE 37.7 vs
+18.8 mm) and still tracks about 6× better per step. ICP aligns two frames, so what matters is how well the two
+cleaned frames agree with each other, not how close each is to the truth.
 
 **The paper's ambiguous step does not matter.** Its hole-prediction equation can be read three ways (`paper`,
 `exclude`, `nonlocal` in the code). All three give results within 0.06 cm, because holes are only about 1 % of
 the pixels.
 
-<img src="src/results/icl_paths_rgbd_zoom.png" alt="ICL camera paths with RGB-D odometry" width="85%">
+<img src="src/results/icl_paths_depth_zoom.png" alt="ICL camera paths with depth-only ICP" width="85%">
 
-*ICL, RGB-D odometry: estimated camera paths seen from above (top) and the position error per frame (bottom, log
-scale). The median (orange) stays close to the true path; the paper (red) drifts with the uncleaned input (blue).*
+*ICL, depth-only ICP: estimated camera paths seen from above (top) and the position error per frame (bottom, log
+scale).*
 
-### 3. Should the holes be filled?
+### 3. Which ICP variant?
+
+Same cleaned depth, four ways to align it (`src/icp_variants.py`, `src/results/icp_variants.txt`). ATE in cm / RPE in mm.
+
+| ICL | point-to-point (SVD) | **point-to-plane** | point-to-plane + Tukey loss | generalized ICP |
+|---|---|---|---|---|
+| true depth | 1.81 / 3.29 | 0.19 / 0.07 | **0.14 / 0.05** | – |
+| no cleaning | 36.96 / 21.36 | **17.05 / 14.38** | 22.47 / 17.47 | – |
+| median 9×9 | 28.50 / 19.72 | **14.94 / 11.78** | 19.24 / 14.11 | – |
+| paper | 1.93 / 3.16 | **0.95 / 2.02** | 1.42 / 2.54 | – |
+
+| TUM | point-to-point (SVD) | **point-to-plane** | point-to-plane + Tukey loss | generalized ICP |
+|---|---|---|---|---|
+| no cleaning | 27.24 / 14.92 | 13.97 / 11.69 | 14.31 / **11.55** | – |
+| median 9×9 | 18.14 / 13.78 | 13.33 / **10.86** | **13.07** / 10.96 | 281559 (diverged) |
+| paper | 5.31 / 5.21 | 3.33 / 4.37 | **3.21 / 4.23** | 14.13 / 43.42 |
+
+- **Point-to-plane beats point-to-point in all 7 rows**, by about 2× on ICL and 1.4 to 5× on TUM. The SVD variant is not
+  good enough on this data: with the median it drifts 28.5 cm on ICL, and even with *true* depth it reaches 1.81 cm
+  (point-to-plane: 0.19 cm). Matched points are not the same physical spot, so point-to-point counts sliding along a
+  surface as error.
+- **The robust Tukey loss is no clear improvement**: slightly better on TUM, worse on ICL (19.24 vs 14.94 cm on the median).
+- **Generalized ICP diverged** (non-finite poses) on every noisy sequence we could finish. It crashed the run on ICL, so
+  no ICL numbers exist; on TUM it gave 281559 cm with the median and 14.13 cm with the paper. We did not tune it, so
+  this means "unstable with these settings", not "bad in general".
+- **The cleaner ranking does not depend on the ICP variant**: the paper beats the median under every variant that ran
+  (e.g. ICL 0.95 vs 14.94 cm point-to-plane, 1.93 vs 28.50 cm point-to-point). The median never fixes tracking.
+
+These numbers come from the log of a Kaggle run that finished all tracking except generalized ICP and then crashed at
+the table step. Colored ICP is excluded because it uses the colour image.
+
+### 4. Why does the median not help ICP?
+
+ICP drops far-off point pairs, so the spikes the paper leaves cost it little. Point-to-plane ICP does depend on the
+surface normals, and the median's output is rougher than the paper's. We checked this on 9 ICL frames
+(`experiments/normals_check/`):
+
+| | normal error vs true normals: median / mean | disagreement between consecutive frames under the true motion: median / bias |
+|---|---|---|
+| true depth | – | 0.3 / 0.01 mm |
+| no cleaning | 5.5° / 10.1° | 5.0 / 0.84 mm |
+| median 9×9 | 2.8° / 7.4° | 3.6 / 1.09 mm |
+| paper | **1.6° / 3.7°** | **1.8 / 0.26 mm** |
+
+The paper's normals are about twice as accurate, its consecutive frames agree about twice as well, and the median
+leaves the largest systematic bias (1.09 mm, slightly above the raw input). This matches the explanation that ICP
+drifts on the median output because of biased normals and inconsistent surfaces.
+
+**Limits.** 9 frames, ICL only. The paper does smoothing and temporal averaging together, so this check cannot say
+which of the two matters. We did not measure ICP's response to these errors directly. To separate the causes, run the
+paper with its temporal window set to zero and repeat the tracking.
+
+### 5. Should the holes be filled?
 
 After the median about 1 % of ICL pixels and 16 % of TUM pixels are holes. We tested 8 ways to fill them
 (`experiments/hole_filling/`). *Fill error* is measured against the true depth at ICL's real holes; tracking is
-ATE in cm.
+depth-only ICP, ATE in cm.
 
-| fill method | fill error (mm) | ICL RGB-D | TUM depth-only ICP | TUM RGB-D | time per frame |
-|---|---|---|---|---|---|
-| **none (keep holes)** | – | **0.98** | 13.33 | **2.08** | 0 ms |
-| Telea inpainting (OpenCV) | 87.0 | 1.44 | 20.21 | 3.13 | 210 ms |
-| Navier–Stokes inpainting (OpenCV) | 22.5 | 1.46 | **12.03** | 3.89 | 224 ms |
-| nearest measured pixel | 22.3 | 1.43 | 17.54 | 4.16 | 50 ms |
-| region growing, small holes only | 15.5 | 1.01 | 13.32 | 2.23 | 52 ms |
-| region growing, median of neighbours | 22.5 | 1.43 | 15.14 | 4.08 | 386 ms |
-| background (far side of the hole) | 83.1 | 1.80 | 13.51 | 3.14 | 40 ms |
-| temporal (paper's prediction, frames t±2) | **12.2** | 1.24 | 13.37 | 2.51 | 7.9 s |
+| fill method | fill error (mm) | ICL ICP | TUM ICP | time per frame |
+|---|---|---|---|---|
+| **none (keep holes)** | – | **14.94** | 13.33 | 0 ms |
+| Telea inpainting (OpenCV) | 87.0 | 15.18 | 20.21 | 210 ms |
+| Navier–Stokes inpainting (OpenCV) | 22.5 | 15.36 | **12.03** | 224 ms |
+| nearest measured pixel | 22.3 | 15.05 | 17.54 | 50 ms |
+| region growing, small holes only | 15.5 | 14.94 | 13.32 | 52 ms |
+| region growing, median of neighbours | 22.5 | 15.15 | 15.14 | 386 ms |
+| background (far side of the hole) | 83.1 | 15.24 | 13.51 | 40 ms |
+| temporal (paper's prediction, frames t±2) | **12.2** | 15.11 | 13.37 | 7.9 s |
 
-**No fill improves RGB-D odometry, on either dataset.** A filled pixel is a guess, and the trackers do better
-ignoring a missing pixel than using a wrong one. The fills that change the least (small holes only, temporal) hurt
-the least. Telea inpainting, the obvious first choice, is among the least accurate (87 mm), because it blends
-the near and far sides of a depth edge. The one gain, Navier–Stokes on TUM depth-only ICP (12.03 vs 13.33 cm), does
-not hold on ICL (15.36 vs 14.94 cm), so we do not count it.
+**No fill reliably helps ICP.** On ICL every fill is equal to or worse than keeping the holes. The one gain,
+Navier–Stokes on TUM (12.03 vs 13.33 cm), does not hold on ICL (15.36 vs 14.94 cm), so we do not count it. Telea
+inpainting, the obvious first choice, is among the least accurate (87 mm), because it blends the near and far sides of a
+depth edge.
 
 <img src="experiments/hole_filling/results/fills.png" alt="Hole-filling comparison" width="100%">
 
-
 ## Conclusion
 
-| if your system uses... | use | why |
+| goal | use | why |
 |---|---|---|
-| **RGB-D odometry** (colour + depth) | **9×9 median, no hole filling** | best depth accuracy (error halved), best or equal-best tracking, under a minute for 450 frames |
-| **depth-only ICP** | the paper's pipeline | 4–16× less drift thanks to its smooth surfaces, but about 26 min for 450 frames |
+| **depth-only ICP tracking** (main) | the paper's pipeline | 4–16× less drift than the raw input or our median, but about 26 min for 450 frames |
+| depth error only | 9×9 median | halves the error (MAE 39 to 19 mm), under a minute for 450 frames |
 | filled depth for display | median + Navier–Stokes or nearest | about 4× more accurate than Telea; do not feed it to the tracker |
+
+The main finding: **a cleaner that is better at removing depth error is not automatically better for ICP.** The median is
+the more accurate cleaner but the paper is far better for depth-only tracking.
 
 
 ## Common questions
 
-All six cleaner + tracker combinations, ATE in cm, sorted by the real-sensor (TUM) result:
+Depth-only ICP, ATE in cm:
 
-| cleaner | tracker | TUM (real) | ICL (synthetic) |
-|---|---|---|---|
-| **median 9×9 (ours)** | RGB-D odometry | **2.08** | 0.98 |
-| paper (Fu et al.) | RGB-D odometry | 2.10 | 26.07 |
-| no cleaning | RGB-D odometry | 2.14 | 23.59 |
-| paper (Fu et al.) | depth-only ICP | 3.33 | **0.95** |
-| median 9×9 (ours) | depth-only ICP | 13.32 | 14.94 |
-| no cleaning | depth-only ICP | 13.97 | 17.07 |
+| cleaner | TUM (real) | ICL (synthetic) |
+|---|---|---|
+| paper (Fu et al.) | **3.33** | **0.95** |
+| median 9×9 (ours) | 13.32 | 14.94 |
+| no cleaning | 13.97 | 17.07 |
 
-- **Does either cleaner use the RGB image?** No. Both are depth-only. The RGB image goes unchanged to the RGB-D
-  tracker, the same for every method, so only the cleaned depth differs.
-- **Then why test with an RGB-D tracker?** Real systems use both kinds of tracker, and the best cleaner flips between
-  them. With only ICP we'd conclude "the median barely helps"; with only RGB-D, "the paper makes things worse". Both
-  are true, each for its own tracker.
-- **Isn't depth alone enough?** Only with very clean depth. With ICL's perfect depth, ICP is best (0.19 cm). On real
-  TUM data the best depth-only result is 3.33 cm and needs the 26-minute pipeline; RGB-D gets 2.08 cm with the median.
-  Depth-only also can't measure motion along flat walls or floors, and TUM is still 16 % holes after cleaning.
-- **Isn't the depth-only error lower than ours?** Paper + ICP vs. median + RGB-D: 0.95 vs 0.98 cm on ICL (a tie,
-  within noise) and 3.33 vs 2.08 cm on TUM (RGB-D wins). But median + depth-only ICP is poor (13–15 cm): the median
-  doesn't suit a depth-only tracker.
-- **RGB-D "ICP"?** No: RGB-D odometry is not ICP. ICP aligns 3D points using depth only; RGB-D odometry aligns the
-  images using colour and depth.
-
-Full answers: section 4 of the write-up, [`report/report.tex`](report/report.tex).
+- **Does either cleaner use the RGB image?** No. Both are depth-only, and so is the main tracker.
+- **What kind of ICP is it?** Open3D point-to-plane ICP on point clouds, frame to frame. Point-to-plane only counts the
+  distance along the surface normal, so it needs good normals. The SVD-based point-to-point variant was also run and is
+  worse everywhere (section 3).
+- **Does ICP reject spikes?** Mostly. Pairs farther apart than 10/5/2 cm (at the three scales) are dropped, so a large
+  spike has no partner and is ignored. This is why the paper can keep its spikes and still track well.
+- **Isn't depth alone enough?** Only with very clean depth. With ICL's perfect depth, ICP is best (0.19 cm). Depth-only
+  tracking cannot measure motion along flat walls or floors, and TUM is still 16 % holes after cleaning.
 
 
 ## Run it
 
 ```
 pip install -r requirements.txt                              # Python 3.12
-python src/icl_compare.py --start 1 --frames 300 --step 2   # ICL: depth error + both trackers
-python src/tum_compare.py --start 0 --frames 300 --step 2   # TUM: both trackers (slow; ran on Kaggle, see kaggle/PUSH.md)
+python src/icl_compare.py --start 1 --frames 300 --step 2   # ICL: depth error + depth-only ICP
+python src/tum_compare.py --start 0 --frames 300 --step 2   # TUM: depth-only ICP (slow; ran on Kaggle, see kaggle/PUSH.md)
+python src/icp_variants.py --dataset both --frames 300 --step 2   # ICP variants (about 2 h on Kaggle's 4 cores)
 python experiments/hole_filling/compare_fills.py --frames 300 --step 2   # hole-filling comparison (slow)
-cd report; pdflatex results.tex; pdflatex results.tex        # rebuild results.pdf, then copy it to ../results.pdf
+python experiments/normals_check/check_normals.py           # normal and frame-agreement check (about 2 min)
 ```
 
 Datasets are not included. Download them into this folder:
 [ICL-NUIM](https://www.doc.ic.ac.uk/~ahanda/VaFRIC/iclnuim.html) living room kt0 → `ICL NUIM/`, and
 [TUM RGB-D](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) fr3 long_office_household → `RGB TUM/`.
-All numbers above are in `src/results/icl_compare.txt`, `src/results/tum_compare.txt` and
-`experiments/hole_filling/results/fills.txt`.
+All numbers above are in `src/results/icl_compare.txt`, `src/results/tum_compare.txt`,
+`experiments/hole_filling/results/fills.txt` and `experiments/normals_check/results/normals.txt`.
 
 
 ## Folder layout
@@ -188,10 +223,9 @@ All numbers above are in `src/results/icl_compare.txt`, `src/results/tum_compare
 | folder | contents |
 |---|---|
 | `src/` | the code: `clean.py` (ours), `paper_pipeline.py` (the paper), `icl_compare.py` / `tum_compare.py` (the experiments), `plot_paths.py` (path figures); `results/` holds all numbers and figures |
-| `experiments/` | the hole-filling comparison, the earlier filter study that chose the median, and our first versions of the paper pipeline |
+| `experiments/` | the hole-filling comparison, the normals check, the earlier filter study that chose the median, and our first versions of the paper pipeline |
 | `kaggle/` | scripts for the slow runs on Kaggle |
-| `report/` | LaTeX sources: `results.tex` (builds `results.pdf`) and `report.tex` (full write-up) |
-| `results.pdf` | all results: tables and figures, each table labelled with its source file |
+| `results.pdf` | tables and figures from before the restructuring |
 
 
 ## Credits

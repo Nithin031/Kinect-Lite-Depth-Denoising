@@ -3,9 +3,9 @@ The paper pipeline against median filtering on TUM RGB-D fr3 long_office_househo
 
     depth frames -> each method -> ICP between neighbouring frames -> camera path -> error against groundtruth.txt
 
-TUM has no true depth, so only the camera paths are compared. Methods, trackers, frame count, step and path errors
+TUM has no true depth, so only the camera paths are compared. Methods, tracker, frame count, step and path errors
 are those of icl_compare.py; only the camera, the data and the pose file differ. The true pose of each frame is the
-groundtruth.txt pose recorded closest in time; the colour image is the one taken closest in time (as icp.py).
+groundtruth.txt pose recorded closest in time.
 
 Run:  python src/tum_compare.py --start 0 --frames 300 --step 2 --jobs 4
       (set TUM_DIR to the dataset folder if it is not at "RGB TUM/rgbd_dataset_freiburg3_long_office_household")
@@ -24,7 +24,7 @@ import open3d as o3d
 import data as D
 import icl_compare as C
 import paper_pipeline as P
-from icp import colour_images, true_poses
+from tum_poses import true_poses
 from plot_paths import save_paths, zoom_figure
 
 CAMERA = o3d.camera.PinholeCameraIntrinsic(640, 480, 535.4, 539.2, 320.1, 247.6)   # TUM fr3
@@ -60,7 +60,6 @@ def main():
     ap.add_argument("--start", type=int, default=0)
     ap.add_argument("--frames", type=int, default=300)
     ap.add_argument("--step", type=int, default=2, help="track every N-th frame")
-    ap.add_argument("--tracker", default="both", choices=("depth", "rgbd", "both"))
     ap.add_argument("--methods", nargs="*", default=list(C.METHODS))
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2)))
     ap.add_argument("--redo", action="store_true")
@@ -78,18 +77,17 @@ def main():
                 print(f"restored {n}/{len(jobs)} ({time.time() - t0:.0f} s)", flush=True)
 
     truth = true_poses(tracked)
-    colours = colour_images(tracked) if args.tracker in ("rgbd", "both") else None
     sources = {name: [restored(name, i) for i in tracked] for name in args.methods}
 
     os.makedirs(C.RESULTS, exist_ok=True)
     lines = [f"TUM RGB-D fr3 long_office_household, frames {frames[0]}-{frames[-1]}"]
-    for tracker in (("depth", "rgbd") if args.tracker == "both" else (args.tracker,)):
-        lines += ["", f"Camera path with the {tracker} tracker, {len(tracked)} frames (every {args.step}-th), "
+    for tracker in ("depth",):
+        lines += ["", f"Camera path with depth-only ICP, {len(tracked)} frames (every {args.step}-th), "
                       f"against groundtruth.txt",
                   f"{'depth used':26s}{'ATE (cm)':>12s}{'RPE (mm)':>12s}{'RPE (deg)':>12s}"]
         paths = {}
         for name, depths in sources.items():
-            est = C.track_depth(depths, CAMERA) if tracker == "depth" else C.track_rgbd(depths, colours, CAMERA)
+            est = C.track_depth(depths, CAMERA)
             r = paths[name] = C.path_errors(est, truth)
             lines.append(f"{name:26s}{r['ate_cm']:12.2f}{r['rpe_mm']:12.2f}{r['rpe_deg']:12.3f}")
             print(lines[-1], flush=True)
@@ -97,8 +95,7 @@ def main():
                             title="TUM fr3 long_office_household camera path, top view (aligned to the true path)")
         save_paths(paths, tracked, os.path.join(C.RESULTS, f"tum_paths_{tracker}.npz"))
         zoom_figure(paths, tracked, os.path.join(C.RESULTS, f"tum_paths_{tracker}_zoom.png"),
-                    f"TUM fr3 long_office_household: camera paths with "
-                    f"{'depth-only ICP' if tracker == 'depth' else 'RGB-D odometry'}")
+                    "TUM fr3 long_office_household: camera paths with depth-only ICP")
 
     text = "\n".join(lines) + "\n"
     print(text)

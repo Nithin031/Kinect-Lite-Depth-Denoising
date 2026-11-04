@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cleaners and Trackers</title>
+<style>
+/* Plan: plain explainer, one column, a results grid first, then one small live demo of the spike cut-off. */
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --ink:#1b2430; --muted:#5b6675; --line:#d9dee6;
+  --good:#1f7a4d; --goodbg:#dff3e8; --bad:#b3261e; --badbg:#fbe3e1; --accent:#2457c5;
+  --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161c; --card:#1b212a; --ink:#e7ebf1; --muted:#9aa5b4; --line:#2e3744;
+    --good:#5fd39a; --goodbg:#16382a; --bad:#ff8d85; --badbg:#431d1a; --accent:#7ea6ff; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161c; --card:#1b212a; --ink:#e7ebf1; --muted:#9aa5b4; --line:#2e3744;
+  --good:#5fd39a; --goodbg:#16382a; --bad:#ff8d85; --badbg:#431d1a; --accent:#7ea6ff; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);padding:24px 16px 64px}
+main{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:28px;line-height:1.2;margin:0;text-wrap:balance}
+h2{font-size:20px;margin:0 0 8px;text-wrap:balance}
+p{margin:0 0 10px;max-width:65ch}
+.sub{color:var(--muted)}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+.grid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:6px;font-size:15px}
+.grid div{padding:10px;border-radius:6px}
+.head{font-weight:600;color:var(--muted)}
+.good{background:var(--goodbg);color:var(--good);font-weight:600}
+.bad{background:var(--badbg);color:var(--bad);font-weight:600}
+.good small,.bad small{display:block;font-weight:400;color:var(--ink)}
+ol,ul{margin:0 0 10px;padding-left:22px}
+li{margin-bottom:6px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two>div{border:1px solid var(--line);border-radius:8px;padding:12px}
+.two h3{margin:0 0 6px;font-size:16px}
+.controls{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:8px 0}
+label{display:flex;gap:8px;align-items:center}
+input[type=range]{width:180px}
+button{font:inherit;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px;border:1px solid var(--line)}
+.readout{font-family:var(--mono);font-size:14px;margin-top:8px}
+.note{border-left:3px solid var(--accent);padding:4px 12px;color:var(--muted)}
+@media (max-width:560px){.grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Which cleaner works with which tracker, and why</h1>
+    <p class="sub">Kinect Lite results on ICL-NUIM. Drift is ATE in cm, lower is better.</p>
+  </header>
+
+  <section>
+    <h2>1. The four results</h2>
+    <div class="grid">
+      <div class="head"></div><div class="head">Depth-only ICP</div><div class="head">RGB-D odometry</div>
+      <div class="head">No cleaning</div><div>17.07 cm</div><div>23.59 cm</div>
+      <div class="head">Median (ours)</div><div class="bad">14.94 cm<small>still drifts</small></div><div class="good">0.98 cm<small>works</small></div>
+      <div class="head">Paper (Fu et al.)</div><div class="good">0.95 cm<small>works</small></div><div class="bad">26.0 cm<small>fails</small></div>
+    </div>
+    <p style="margin-top:12px">Each cleaner works with one tracker and fails with the other. So the question is what each cleaner changes in the depth image, and what each tracker is sensitive to.</p>
+  </section>
+
+  <section>
+    <h2>2. What each cleaner does to the depth</h2>
+    <div class="two">
+      <div><h3>Median</h3><p>Removes <b>spikes</b> (RMSE 187 to 55 mm). Does little to the ordinary small noise.</p></div>
+      <div><h3>Paper</h3><p>Smooths the ordinary noise by averaging neighbours and nearby frames. Keeps the <b>spikes</b> (RMSE stays at 186 mm), because a spike has no similar neighbours to average with.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. What each tracker does with a spike</h2>
+    <div class="two">
+      <div><h3>Depth-only ICP</h3><p>Matches each 3D point to its nearest point in the other frame, then <b>throws away pairs that are too far apart</b> (10, 5, then 2 cm in our code). A spike is far from everything, so it is dropped.</p></div>
+      <div><h3>RGB-D odometry</h3><p>Compares every pixel directly. It has <b>no cut-off</b>, so a spike pulls the result.</p></div>
+    </div>
+    <p style="margin-top:12px">Try it. Twenty points on a flat wall are measured with small noise. The true error is zero. Add a spike and switch the cut-off on or off.</p>
+    <div class="controls">
+      <label><input type="checkbox" id="spike" checked> Add a spike</label>
+      <label><input type="checkbox" id="cut" checked> Use cut-off (ICP)</label>
+      <label>Cut-off <input type="range" id="cutval" min="2" max="30" value="10"> <span id="cutlabel">10 cm</span></label>
+      <button id="again" type="button">New noise</button>
+    </div>
+    <svg id="plot" viewBox="0 0 700 220" role="img" aria-label="Twenty measured points on a flat wall, one of them a spike"></svg>
+    <div class="readout" id="out"></div>
+    <p class="note" style="margin-top:10px">This is a one-number toy: it estimates a single offset as the mean of the points it keeps. Real ICP solves for a full camera motion, but the effect of a cut-off on a spike is the same.</p>
+  </section>
+
+  <section>
+    <h2>4. What still needs checking</h2>
+    <p>Sections 2 and 3 explain why the paper <b>fails</b> with RGB-D (it keeps the spikes) and why the median <b>works</b> with RGB-D (it removes them). They also explain why spikes do not hurt ICP.</p>
+    <p>They do not fully explain why the median <b>fails with ICP</b>. What the numbers show:</p>
+    <ul>
+      <li>The camera moves 6.5 mm per tracked step. The median's ICP error per step is 11.78 mm, larger than the motion. The paper's is 2.02 mm.</li>
+      <li>The paper has worse per-pixel depth error than the median (MAE 37.7 against 18.8 mm) and still tracks better. So depth accuracy alone does not predict ICP accuracy.</li>
+    </ul>
+    <p>The project's explanation is that the paper gives smoother surfaces and therefore better surface normals, which ICP needs. That has not been tested directly. A quick test would be to compute the normals from each cleaner's output and compare them with the normals from the true depth.</p>
+  </section>
+</main>
+
+<script>
+(function(){
+  var W=700,H=220,N=20,noise=[],svg=document.getElementById('plot');
+  var spike=document.getElementById('spike'),cut=document.getElementById('cut'),cv=document.getElementById('cutval');
+  function gauss(){var u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+  function resample(){noise=[];for(var i=0;i<N;i++)noise.push(gauss()*1.5)}  /* cm */
+  function draw(){
+    var cutoff=+cv.value; document.getElementById('cutlabel').textContent=cutoff+' cm';
+    var pts=noise.slice(); if(spike.checked) pts[14]=25;
+    var useCut=cut.checked, kept=[], i;
+    for(i=0;i<N;i++){ if(!useCut||Math.abs(pts[i])<=cutoff) kept.push(pts[i]); }
+    var est=kept.length?kept.reduce(function(a,b){return a+b},0)/kept.length:0;
+    var y0=H/2+20, sc=4; /* px per cm; wall at residual 0 */
+    var cs=getComputedStyle(document.documentElement);
+    var ink=cs.getPropertyValue('--ink'),mut=cs.getPropertyValue('--muted'),acc=cs.getPropertyValue('--accent'),bad=cs.getPropertyValue('--bad'),line=cs.getPropertyValue('--line');
+    var s='';
+    s+='<line x1="30" y1="'+y0+'" x2="'+(W-20)+'" y2="'+y0+'" stroke="'+mut+'" stroke-dasharray="4 4"/>';
+    s+='<text x="34" y="'+(y0+16)+'" fill="'+mut+'" font-size="12">true wall</text>';
+    if(useCut){
+      s+='<rect x="30" y="'+(y0-cutoff*sc)+'" width="'+(W-50)+'" height="'+(2*cutoff*sc)+'" fill="'+acc+'" opacity="0.10"/>';
+      s+='<text x="'+(W-24)+'" y="'+(y0-cutoff*sc+14)+'" fill="'+acc+'" font-size="12" text-anchor="end">kept zone (±'+cutoff+' cm)</text>';
+    }
+    for(i=0;i<N;i++){
+      var x=50+i*(W-100)/(N-1), y=y0-pts[i]*sc, out=useCut&&Math.abs(pts[i])>cutoff, isSpike=(spike.checked&&i===14);
+      s+='<circle cx="'+x+'" cy="'+Math.max(8,y)+'" r="5" fill="'+(out?'none':(isSpike?bad:ink))+'" stroke="'+(out||isSpike?bad:ink)+'" stroke-width="1.5"/>';
+    }
+    var ey=y0-est*sc;
+    s+='<line x1="30" y1="'+ey+'" x2="'+(W-20)+'" y2="'+ey+'" stroke="'+acc+'" stroke-width="2"/>';
+    s+='<text x="34" y="'+(ey-6)+'" fill="'+acc+'" font-size="12">estimate</text>';
+    svg.innerHTML=s;
+    document.getElementById('out').textContent='points used: '+kept.length+' of '+N+'   |   estimated error: '+est.toFixed(2)+' cm   (true error: 0)';
+  }
+  [spike,cut,cv].forEach(function(e){e.addEventListener('input',draw)});
+  document.getElementById('again').addEventListener('click',function(){resample();draw()});
+  resample();draw();
+})();
+</script>
+</body>
+</html>

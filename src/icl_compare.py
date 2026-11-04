@@ -12,9 +12,8 @@ Methods:
     paper (center=exclude)         ... i = 0 skipped (pipeline_paper_kt.py)
     paper (center=nonlocal)        ... i = 0 searched at non-zero shifts only (pipeline_v2.py)
 
-Trackers (--tracker):
-    depth   point-to-plane ICP on the point clouds, coarse to fine: uses the depth only, so it shows the depth quality
-    rgbd    Open3D hybrid RGB-D odometry (as in icp.py): depth + colour
+Tracker: depth-only ICP on the point clouds, coarse to fine (point-to-plane by default; other variants in
+icp_variants.py), so the camera path shows the depth quality.
 
 Path errors: ATE = RMS distance between estimated and true camera positions after the best rigid alignment (cm);
 RPE = RMS error of the motion between consecutive tracked frames (mm and degrees).
@@ -44,7 +43,6 @@ from plot_paths import save_paths, zoom_figure
 
 RESULTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 CACHE = os.path.join(D.OUTPUTS, "icl_compare", "frames")
-ICL_RGB = os.path.join(os.path.dirname(D.ICL_NOISY), "rgb")
 GT_PATH = os.path.join(D.DATA_ROOT, "ICL NUIM", "gt", "livingRoom0.gt.freiburg")
 CAMERA = o3d.camera.PinholeCameraIntrinsic(640, 480, 481.20, 480.00, 319.50, 239.50)   # ICL-NUIM
 
@@ -146,8 +144,30 @@ def _cloud(depth, camera=CAMERA):
     return pc
 
 
-def track_depth(depths, camera=CAMERA):
-    """Frame-to-frame point-to-plane ICP, coarse to fine; the start guess is the previous motion."""
+ICP_VARIANTS = {   # name -> what ICP minimises (all use depth only)
+    "point": "point-to-point (SVD of the matched pairs)",
+    "plane": "point-to-plane (distance along the target normal)",
+    "plane-tukey": "point-to-plane with a Tukey robust loss (large residuals get zero weight)",
+    "gicp": "generalized ICP (plane-to-plane, uses a covariance per point)",
+}
+
+
+def _estimator(icp, dist):
+    reg = o3d.pipelines.registration
+    if icp == "point":
+        return reg.TransformationEstimationPointToPoint()
+    if icp == "plane":
+        return reg.TransformationEstimationPointToPlane()
+    if icp == "plane-tukey":
+        return reg.TransformationEstimationPointToPlane(reg.TukeyLoss(k=dist / 2))
+    if icp == "gicp":
+        return reg.TransformationEstimationForGeneralizedICP()
+    raise ValueError(f"unknown ICP variant {icp!r}; choose from {list(ICP_VARIANTS)}")
+
+
+def track_depth(depths, camera=CAMERA, icp="plane"):
+    """Frame-to-frame ICP on the depth only, coarse to fine; the start guess is the previous motion.
+    `icp` is one of ICP_VARIANTS; the default (point-to-plane) is what the main results use."""
     scales = [(0.04, 0.10), (0.02, 0.05), (0.01, 0.02)]   # (voxel m, max matching distance m)
     clouds = []
     for d in depths:
@@ -155,7 +175,10 @@ def track_depth(depths, camera=CAMERA):
         levels = []
         for voxel, _ in scales:
             down = pc.voxel_down_sample(voxel)
-            down.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=3 * voxel, max_nn=30))
+            search = o3d.geometry.KDTreeSearchParamHybrid(radius=3 * voxel, max_nn=30)
+            down.estimate_normals(search)
+            if icp == "gicp":
+                down.estimate_covariances(search)
             levels.append(down)
         clouds.append(levels)
 
@@ -164,27 +187,10 @@ def track_depth(depths, camera=CAMERA):
         guess = motion
         for (voxel, dist), src, dst in zip(scales, cur, prev):
             guess = o3d.pipelines.registration.registration_icp(
-                src, dst, dist, guess, o3d.pipelines.registration.TransformationEstimationPointToPlane(),
+                src, dst, dist, guess, _estimator(icp, dist),
                 o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=30)).transformation
         motion = guess
         poses.append(poses[-1] @ motion)
-    return poses
-
-
-def track_rgbd(depths, colours, camera=CAMERA):
-    """Open3D hybrid RGB-D odometry between consecutive frames (as src/icp.py)."""
-    frames = []
-    for c, d in zip(colours, depths):
-        depth_u16 = np.round(np.nan_to_num(d) * D.DEPTH_SCALE).clip(0, 65535).astype(np.uint16)
-        frames.append(o3d.geometry.RGBDImage.create_from_color_and_depth(
-            o3d.geometry.Image(c), o3d.geometry.Image(depth_u16), depth_scale=D.DEPTH_SCALE, depth_trunc=6.0,
-            convert_rgb_to_intensity=True))
-    method = o3d.pipelines.odometry.RGBDOdometryJacobianFromHybridTerm()
-    poses = [np.eye(4)]
-    for prev, cur in zip(frames[:-1], frames[1:]):
-        ok, motion, _ = o3d.pipelines.odometry.compute_rgbd_odometry(
-            cur, prev, camera, np.eye(4), method, o3d.pipelines.odometry.OdometryOption())
-        poses.append(poses[-1] @ (motion if ok else np.eye(4)))
     return poses
 
 
@@ -253,7 +259,6 @@ def main():
     ap.add_argument("--start", type=int, default=1)
     ap.add_argument("--frames", type=int, default=300)
     ap.add_argument("--step", type=int, default=2, help="track every N-th frame (all frames are scored)")
-    ap.add_argument("--tracker", default="both", choices=("depth", "rgbd", "both"))
     ap.add_argument("--methods", nargs="*", default=list(METHODS), help="subset of the method names")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     ap.add_argument("--redo", action="store_true", help="recompute cached restored frames")
@@ -292,17 +297,15 @@ def main():
 
     # 2. tracking
     truth = true_poses(tracked)
-    colours = [cv2.cvtColor(cv2.imread(os.path.join(ICL_RGB, f"{i}.png")), cv2.COLOR_BGR2RGB) for i in tracked] \
-        if args.tracker in ("rgbd", "both") else None
     sources = {"true depth (noise-free)": [D.icl_gt(i) for i in tracked]}
     sources.update({name: [restored(name, i) for i in tracked] for name in args.methods})
 
-    for tracker in (("depth", "rgbd") if args.tracker == "both" else (args.tracker,)):
-        lines += ["", f"2. Camera path with the {tracker} tracker, {len(tracked)} frames (every {args.step}-th)",
+    for tracker in ("depth",):
+        lines += ["", f"2. Camera path with depth-only ICP, {len(tracked)} frames (every {args.step}-th)",
                   f"{'depth used':26s}{'ATE (cm)':>12s}{'RPE (mm)':>12s}{'RPE (deg)':>12s}"]
         paths = {}
         for name, depths in sources.items():
-            est = track_depth(depths) if tracker == "depth" else track_rgbd(depths, colours)
+            est = track_depth(depths)
             paths[name] = path_errors(est, truth)
             r = paths[name]
             lines.append(f"{name:26s}{r['ate_cm']:12.2f}{r['rpe_mm']:12.2f}{r['rpe_deg']:12.3f}")
@@ -311,8 +314,7 @@ def main():
         save_paths_figure(paths, os.path.join(RESULTS, f"icl_camera_paths_{tracker}.png"))
         save_paths(paths, tracked, os.path.join(RESULTS, f"icl_paths_{tracker}.npz"))
         zoom_figure(paths, tracked, os.path.join(RESULTS, f"icl_paths_{tracker}_zoom.png"),
-                    f"ICL-NUIM living room kt0: camera paths with "
-                    f"{'depth-only ICP' if tracker == 'depth' else 'RGB-D odometry'}")
+                    "ICL-NUIM living room kt0: camera paths with depth-only ICP")
 
     text = "\n".join(lines) + "\n"
     print(text)

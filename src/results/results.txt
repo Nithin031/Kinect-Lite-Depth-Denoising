@@ -1,5 +1,0 @@
-40 frames (first 200, every 5-th)
-raw depth (baseline)                : 50.04 cm
-gate only                           : 50.15 cm
-gate + median                       : 39.47 cm
-full clean (gate + median + fill)   : 49.02 cm

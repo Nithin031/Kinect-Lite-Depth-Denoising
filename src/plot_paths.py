@@ -144,7 +144,7 @@ def zoom_figure(paths, frames, out, title):
 
 def main():
     titles = {"icl": "ICL-NUIM living room kt0", "tum": "TUM fr3 long_office_household"}
-    trackers = {"depth": "depth-only ICP", "rgbd": "RGB-D odometry"}
+    trackers = {"depth": "depth-only ICP"}
     files = sorted(glob.glob(os.path.join(RESULTS, "*_paths_*.npz")))
     if not files:
         print("no saved paths in", RESULTS, "- run icl_compare.py / tum_compare.py first")

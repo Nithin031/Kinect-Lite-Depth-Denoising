@@ -1,0 +1,23 @@
+ICP variants on cleaned depth (depth only). ATE (cm) / RPE (mm), 150 tracked frames (every 2nd).
+Source: log of the Kaggle run of src/icp_variants.py (ICL frames 0-300, TUM frames 0-299). That run finished all tracking
+except generalized ICP (gicp), which diverged on noisy depth and crashed the final table step. Every number below is a
+line of that log; "-" means the run never produced it.
+
+ICL-NUIM living room kt0
+depth used                point         plane   plane-tukey          gicp
+true depth (noise-free)   1.81 / 3.29   0.19 / 0.07   0.14 / 0.05   -
+gate only (no cleaning)  36.96 / 21.36  17.05 / 14.38  22.47 / 17.47  -
+median 9x9               28.50 / 19.72  14.94 / 11.78  19.24 / 14.11  -
+paper (center=paper)      1.93 / 3.16    0.95 / 2.02    1.42 / 2.54   -
+
+TUM RGB-D fr3 long_office_household
+depth used                point         plane   plane-tukey          gicp
+gate only (no cleaning)  27.24 / 14.92  13.97 / 11.69  14.31 / 11.55  -
+median 9x9               18.14 / 13.78  13.33 / 10.86  13.07 / 10.96  281559 / 5278871 (diverged)
+paper (center=paper)      5.31 / 5.21    3.33 / 4.37    3.21 / 4.23   14.13 / 43.42
+
+Variants:
+  point: point-to-point (SVD of the matched pairs)
+  plane: point-to-plane (distance along the target normal)
+  plane-tukey: point-to-plane with a Tukey robust loss (k = half the matching distance)
+  gicp: generalized ICP (plane-to-plane, covariance per point)

@@ -1,0 +1,4 @@
+{"id": "wizard1803/kinect-lite-icp-variants", "title": "kinect-lite-icp-variants", "code_file": "run_variants.py",
+ "language": "python", "kernel_type": "script", "is_private": true, "enable_gpu": false, "enable_internet": true,
+ "dataset_sources": ["wizard1803/kinect-lite-code", "wizard1803/tum-fr3-long-office-household", "wizard1803/icl-nuim-kt0-0-300"],
+ "competition_sources": [], "kernel_sources": []}

@@ -42,7 +42,7 @@ import data as D                       # noqa: E402
 import icl_compare as C                # noqa: E402
 import tum_compare as T                # noqa: E402
 from clean import fill_holes, gate, has_value, median_filter   # noqa: E402
-from icp import colour_images, true_poses as tum_true_poses     # noqa: E402
+from tum_poses import true_poses as tum_true_poses     # noqa: E402
 import paper_pipeline as P                                       # noqa: E402
 
 OUT = os.path.join(HERE, "results")
@@ -269,17 +269,15 @@ def _filled(job):
     return out, 1000 * (time.perf_counter() - t0)
 
 
-def track_all(pool, dataset, frames, colours, truth, camera):
-    """For each fill method in turn (one sequence in memory at a time): fill, track with both trackers."""
+def track_all(pool, dataset, frames, truth, camera):
+    """For each fill method in turn (one sequence in memory at a time): fill, track with depth-only ICP."""
     rows, ms = {}, {}
     for name in FILLS:
         res = pool.map(_filled, [(dataset, i, name) for i in frames], chunksize=2)
         seq = [r[0] for r in res]
         ms[name] = float(np.mean([r[1] for r in res]))
-        rows[name] = (C.path_errors(C.track_depth(seq, camera), truth),
-                      C.path_errors(C.track_rgbd(seq, colours, camera), truth))
-        print(f"  {dataset} {name:16s} depth ATE {rows[name][0]['ate_cm']:6.2f} cm | "
-              f"rgbd ATE {rows[name][1]['ate_cm']:6.2f} cm", flush=True)
+        rows[name] = C.path_errors(C.track_depth(seq, camera), truth)
+        print(f"  {dataset} {name:16s} ATE {rows[name]['ate_cm']:6.2f} cm", flush=True)
         del seq, res
     return rows, ms
 
@@ -302,8 +300,7 @@ def main():
     for i, s, _ in pool.imap_unordered(_icl_frame, icl_frames, chunksize=4):
         for n in FILLS:
             scores[n].append(s[n])
-    colours = [cv2.cvtColor(cv2.imread(os.path.join(C.ICL_RGB, f"{i}.png")), cv2.COLOR_BGR2RGB) for i in icl_tracked]
-    icl_track, _ = track_all(pool, "icl", icl_tracked, colours, C.true_poses(icl_tracked), C.CAMERA)
+    icl_track, _ = track_all(pool, "icl", icl_tracked, C.true_poses(icl_tracked), C.CAMERA)
     icl_mask = masked_scores(pool, "icl", icl_tracked, 1 + args.frames)
 
     n_holes = np.mean([s["n_holes"] for s in scores["none"]])
@@ -313,31 +310,30 @@ def main():
               f"masked test = |filled - measured| at punched-in holes ({icl_mask['telea (current)']['n']:.0f} px "
               f"per frame); tracking on {len(icl_tracked)} frames",
               f"{'fill':16s}{'hole MAE':>10s}{'hole med':>10s}{'<5cm %':>8s}{'filled %':>9s}{'ms/frame':>9s}"
-              f"{'ATE dep':>9s}{'RPE dep':>9s}{'ATE rgbd':>9s}{'RPE rgbd':>9s}"
+              f"{'ATE':>9s}{'RPE':>9s}"
               f"{'mask MAE':>9s}{'mask med':>9s}{'m<5cm %':>8s}{'m fill%':>8s}"]
     for n in FILLS:
         m = {k: np.nanmean([s[k] for s in scores[n]]) for k in ("hole_mae", "hole_median", "within_5cm", "filled", "ms")}
-        d, r = icl_track[n]
+        d = icl_track[n]
         lines.append(f"{n:16s}{m['hole_mae']:10.1f}{m['hole_median']:10.1f}{m['within_5cm']:8.1f}{m['filled']:9.1f}"
-                     f"{m['ms']:9.1f}{d['ate_cm']:9.2f}{d['rpe_mm']:9.2f}{r['ate_cm']:9.2f}{r['rpe_mm']:9.2f}"
+                     f"{m['ms']:9.1f}{d['ate_cm']:9.2f}{d['rpe_mm']:9.2f}"
                      + _masked_cols(icl_mask, n))
 
     # TUM: tracking only (no true depth)
     tum_tracked = list(range(0, min(args.frames, D.tum_n_frames())))[::args.step]
     print("TUM ...", flush=True)
     holes_tum = 100 * np.mean([(~has_value(median_filter(gate(D.tum_depth(i))))).mean() for i in tum_tracked[::10]])
-    tum_track, tms = track_all(pool, "tum", tum_tracked, colour_images(tum_tracked), tum_true_poses(tum_tracked),
-                               T.CAMERA)
+    tum_track, tms = track_all(pool, "tum", tum_tracked, tum_true_poses(tum_tracked), T.CAMERA)
     tum_mask = masked_scores(pool, "tum", tum_tracked, D.tum_n_frames())
     pool.close()
     lines += ["", f"TUM fr3 long_office_household, frames {tum_tracked[0]}-{tum_tracked[-1]} (every {args.step}-th), "
               f"after gate + 9x9 median (holes: {holes_tum:.1f} % of the image); no true depth, so fill accuracy only "
               f"from the masked test ({tum_mask['telea (current)']['n']:.0f} px per frame)",
-              f"{'fill':16s}{'ms/frame':>9s}{'ATE dep':>9s}{'RPE dep':>9s}{'ATE rgbd':>9s}{'RPE rgbd':>9s}"
+              f"{'fill':16s}{'ms/frame':>9s}{'ATE':>9s}{'RPE':>9s}"
               f"{'mask MAE':>9s}{'mask med':>9s}{'m<5cm %':>8s}{'m fill%':>8s}"]
     for n in FILLS:
-        d, r = tum_track[n]
-        lines.append(f"{n:16s}{tms[n]:9.1f}{d['ate_cm']:9.2f}{d['rpe_mm']:9.2f}{r['ate_cm']:9.2f}{r['rpe_mm']:9.2f}"
+        d = tum_track[n]
+        lines.append(f"{n:16s}{tms[n]:9.1f}{d['ate_cm']:9.2f}{d['rpe_mm']:9.2f}"
                      + _masked_cols(tum_mask, n))
     lines += ["", "ATE in cm, RPE (translation) in mm; lower is better except <5cm % and filled %."]
 
@@ -366,9 +362,8 @@ def save_figures(scores, icl_track, tum_track, icl_mask, tum_mask):
     axs[1].set_title("masked test: filled pixels within 5 cm (%)\ndotted: ICL, crossed: TUM")
     axs[1].set_xticks(x, names, rotation=30, ha="right")
     for ax, (title, track) in zip(axs[2:], (("ICL", icl_track), ("TUM", tum_track))):
-        ax.bar(x - 0.2, [track[n][0]["ate_cm"] for n in names], 0.4, color=colours, hatch="//", ec="w", label="depth-only ICP")
-        ax.bar(x + 0.2, [track[n][1]["ate_cm"] for n in names], 0.4, color=colours, label="RGB-D odometry")
-        ax.set_title(f"{title}: camera path ATE (cm)\nhatched: depth-only ICP, solid: RGB-D odometry")
+        ax.bar(x, [track[n]["ate_cm"] for n in names], 0.6, color=colours)
+        ax.set_title(f"{title}: depth-only ICP, camera path ATE (cm)")
         ax.set_xticks(x, names, rotation=30, ha="right")
     fig.tight_layout()
     fig.savefig(os.path.join(OUT, "fills.png"), dpi=110)

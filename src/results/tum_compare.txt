@@ -1,6 +1,6 @@
 TUM RGB-D fr3 long_office_household, frames 0-299
 
-Camera path with the depth tracker, 150 frames (every 2-th), against groundtruth.txt
+Camera path with depth-only ICP, 150 frames (every 2-th), against groundtruth.txt
 depth used                    ATE (cm)    RPE (mm)   RPE (deg)
 gate only                        13.97       11.69       0.476
 median 9x9                       13.32       10.86       0.468
@@ -8,12 +8,3 @@ median 9x9 + fill                20.20       12.46       0.497
 paper (center=paper)              3.33        4.37       0.402
 paper (center=exclude)            3.31        4.37       0.403
 paper (center=nonlocal)           3.31        4.37       0.402
-
-Camera path with the rgbd tracker, 150 frames (every 2-th), against groundtruth.txt
-depth used                    ATE (cm)    RPE (mm)   RPE (deg)
-gate only                         2.14        5.61       0.296
-median 9x9                        2.08        5.69       0.304
-median 9x9 + fill                 3.13        5.69       0.320
-paper (center=paper)              2.10        5.80       0.315
-paper (center=exclude)            2.10        5.79       0.315
-paper (center=nonlocal)           2.12        5.80       0.315

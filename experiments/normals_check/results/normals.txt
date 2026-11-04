@@ -1,0 +1,15 @@
+ICL-NUIM kt0, 9 tracked frames (101..117, every 2nd), 8 consecutive pairs. Same normal settings as the ICP (voxel 2 cm, radius 6 cm, 30 neighbours).
+
+A. Surface-normal error against normals of the true depth (degrees)
+method              median    mean     p90   matched points
+raw (gate only)        5.5    10.1    22.5   64%
+median 9x9             2.8     7.4    17.8   70%
+paper                  1.6     3.7     8.9   63%
+
+B. Do consecutive frames agree under the TRUE camera motion? Point-to-plane residual of frame j
+   (moved into frame i with the true pose) against frame i's surface. mm, matches within 5 cm.
+method             median|r|   mean r   rms r   (mean r = systematic bias)
+true depth              0.3     0.01     1.1
+raw (gate only)         5.0     0.84     8.1
+median 9x9              3.6     1.09     6.4
+paper                   1.8     0.26     5.2
