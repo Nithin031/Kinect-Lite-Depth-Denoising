@@ -1,0 +1,6 @@
+# Python 3.12. Versions used for every result in this folder.
+numpy==2.5.3
+opencv-python==5.0.0.93
+scipy==1.18.1
+matplotlib==3.11.1
+open3d==0.20.0

@@ -1,0 +1,35 @@
+ICL-NUIM living room kt0, frames 1-300 (300 frames)
+
+1. Depth error against the noise-free depth (mean over frames; mm unless %)
+method                              mae         rmse   median_err   within_1cm measured_mae     hole_mae     coverage holes_filled
+gate only                         39.19       187.45        13.33        42.19        39.19          nan        99.16         0.00
+median 9x9                        18.77        55.41        12.32        44.66        18.77          nan        99.16         0.00
+median 9x9 + fill                 19.34        57.67        12.36        44.47        18.77        86.99       100.00       100.00
+paper (center=paper)              37.69       186.00        13.42        33.69        37.36       132.54        99.49        39.56
+paper (center=exclude)            37.69       186.00        13.41        33.69        37.36       133.49        99.49        39.56
+paper (center=nonlocal)           37.69       186.01        13.41        33.69        37.36       133.57        99.49        39.56
+  median 9x9: lower MAE than the input on 100 % of frames
+  median 9x9 + fill: lower MAE than the input on 100 % of frames
+  paper (center=paper): lower MAE than the input on 99 % of frames
+  paper (center=exclude): lower MAE than the input on 99 % of frames
+  paper (center=nonlocal): lower MAE than the input on 99 % of frames
+
+2. Camera path with the depth tracker, 150 frames (every 2-th)
+depth used                    ATE (cm)    RPE (mm)   RPE (deg)
+true depth (noise-free)           0.19        0.07       0.001
+gate only                        17.07       14.43       0.426
+median 9x9                       14.94       11.78       0.382
+median 9x9 + fill                15.18       12.01       0.388
+paper (center=paper)              0.95        2.02       0.062
+paper (center=exclude)            0.95        2.02       0.062
+paper (center=nonlocal)           0.95        2.02       0.062
+
+2. Camera path with the rgbd tracker, 150 frames (every 2-th)
+depth used                    ATE (cm)    RPE (mm)   RPE (deg)
+true depth (noise-free)           0.81        2.18       0.095
+gate only                        23.59       24.20       0.209
+median 9x9                        0.98        1.59       0.043
+median 9x9 + fill                 1.44        1.91       0.068
+paper (center=paper)             26.07       21.76       0.203
+paper (center=exclude)           26.03       21.76       0.203
+paper (center=nonlocal)          26.01       21.75       0.203

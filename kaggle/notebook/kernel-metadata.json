@@ -1,0 +1,4 @@
+{"id": "wizard1803/kinect-lite-tum-compare", "title": "kinect-lite-tum-compare", "code_file": "run_tum.py",
+ "language": "python", "kernel_type": "script", "is_private": true, "enable_gpu": false, "enable_internet": true,
+ "dataset_sources": ["wizard1803/kinect-lite-code", "wizard1803/tum-fr3-long-office-household"],
+ "competition_sources": [], "kernel_sources": []}

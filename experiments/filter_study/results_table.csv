@@ -1,0 +1,8 @@
+filter,"error, all pixels (mm)","error, flat areas (mm)","error, object edges (mm)","change vs raw, median over frames (mm)",test frames worse than raw (of 30),time per frame (ms),config id
+raw input (no filter),26.2,14.1,336.0,0.0,0,0.0,raw
+"median, k 11",14.8,10.8,115.0,-12.7,0,260.0,median_k11_gate0.4
+"invalid-aware median, k 9",12.8,9.2,107.0,-15.0,0,211.0,iamedian_k9_gate0.4
+"Gaussian, OpenCV, sigma 0.5 px",26.1,14.5,322.0,-0.2,12,5.0,gaussian_cv2_s0.5_gate0.4
+"Gaussian, masked, sigma 1.5 px",23.7,12.5,289.0,-2.4,0,14.0,gaussian_masked_s1.5_gate0.4
+"bilateral, OpenCV, sigma_r 0.3 m",23.4,12.1,306.0,-3.0,0,44.0,bilateral_cv2_d15_s10_r0.3_gate0.4
+"bilateral, masked, sigma_r 1 m",21.5,11.6,236.0,-4.9,0,1815.0,bilateral_masked_d15_s10_r1_gate0.4

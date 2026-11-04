@@ -1,0 +1,36 @@
+# Datasets (download separately; see README.md)
+ICL NUIM/
+RGB TUM/
+
+# Restored frames (regenerable, several hundred MB)
+cache/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.npy
+.ipynb_checkpoints/
+
+# Kaggle downloads and uploads (code/*.py are copies of src/ and experiments/)
+kaggle/output/
+kaggle/output_fills/
+kaggle/output_full/
+kaggle/code/*.py
+
+# LaTeX build files
+*.aux
+*.out
+*.toc
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# OS and editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
