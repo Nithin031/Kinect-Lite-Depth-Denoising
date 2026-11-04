@@ -15,7 +15,18 @@ Each cleaned sequence is fed to two trackers, and the estimated camera path is c
 - **depth-only ICP**: aligns consecutive 3D point clouds (Open3D point-to-plane ICP). Uses depth only.
 - **RGB-D odometry**: aligns consecutive frames using colour and depth together (Open3D hybrid odometry).
 
-**Full report:** [`results.pdf`](results.pdf)
+> **Neither cleaner uses the colour image.** Fu et al. is a depth-only method, and so is our median. The RGB image
+> is used only by the RGB-D tracker, *after* cleaning, and it is the same unmodified image for every method. So the
+> only thing that changes between rows of the results is the cleaned depth. We test with both trackers because real
+> systems use both kinds, and the best cleaner turns out to be different for each.
+
+```
+raw depth ──► cleaner (none / median / paper) ──► cleaned depth ──► depth-only ICP ──► camera path vs. true path
+                                                  cleaned depth ─┐
+RGB image (unchanged, same for every method) ────────────────────┴► RGB-D odometry ──► camera path vs. true path
+```
+
+**Full report:** [`results.pdf`](results.pdf) (source: [`report/report.tex`](report/report.tex))
 
 
 ## Data and metrics
@@ -131,6 +142,7 @@ pip install -r requirements.txt                              # Python 3.12
 python src/icl_compare.py --start 1 --frames 300 --step 2   # ICL: depth error + both trackers
 python src/tum_compare.py --start 0 --frames 300 --step 2   # TUM: both trackers (slow; ran on Kaggle, see kaggle/PUSH.md)
 python experiments/hole_filling/compare_fills.py --frames 300 --step 2   # hole-filling comparison (slow)
+cd report; pdflatex report.tex; pdflatex report.tex          # rebuild the report, then copy report.pdf to ../results.pdf
 ```
 
 Datasets are not included. Download them into this folder:
@@ -147,6 +159,7 @@ All numbers above are in `src/results/icl_compare.txt`, `src/results/tum_compare
 | `src/` | the code: `clean.py` (ours), `paper_pipeline.py` (the paper), `icl_compare.py` / `tum_compare.py` (the experiments), `plot_paths.py` (path figures); `results/` holds all numbers and figures |
 | `experiments/` | the hole-filling comparison, the earlier filter study that chose the median, and our first versions of the paper pipeline |
 | `kaggle/` | scripts for the slow runs on Kaggle |
+| `report/` | LaTeX source of the report (`report.tex`) |
 | `results.pdf` | the full report |
 
 
