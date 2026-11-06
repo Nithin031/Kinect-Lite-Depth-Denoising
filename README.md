@@ -4,7 +4,13 @@ Kinect-style depth cameras give a distance for every pixel, but two kinds of err
 **spikes** (pixels with a wildly wrong distance) and **holes** (pixels with no distance at all). This project
 cleans the depth images and measures whether the cleaning makes **depth-only ICP camera tracking** more accurate.
 
-We compare two cleaners:
+## At a glance
+
+- **Depth accuracy:** a simple 9×9 median halves the depth error (MAE 39 to 19 mm on ICL); the paper's filter barely changes it.
+- **Camera tracking:** the paper's pipeline gives 4–16× less drift than the raw input or our median (ATE 0.95 vs 14.94 cm on ICL, 3.33 vs 13.32 cm on TUM).
+- **Takeaway:** a cleaner that removes more depth error is not automatically better for ICP.
+
+## The two cleaners
 
 | method | code | how it works | time for 450 frames |
 |---|---|---|---|
@@ -14,17 +20,13 @@ We compare two cleaners:
 Each cleaned sequence is fed to a **depth-only ICP** tracker, and the estimated camera path is compared with the true one.
 The tracker aligns consecutive 3D point clouds with Open3D point-to-plane ICP (coarse to fine, voxels 4/2/1 cm, pairs
 farther apart than 10/5/2 cm are dropped). It uses the depth only, so the only thing that changes between rows of the
-results is the cleaned depth. Neither cleaner uses the colour image.
-
+results is the cleaned depth.
 > **ICP variants:** the main results use point-to-plane ICP. Point-to-point (the SVD-based variant in the proposal), a
 > robust point-to-plane and generalized ICP are compared in section 3.
 
 ```
 raw depth ──► cleaner (none / median / paper) ──► cleaned depth ──► depth-only ICP ──► camera path vs. true path
 ```
-
-**Older summary:** [`results.pdf`](results.pdf) was built before this restructuring and is out of date.
-
 
 ## Data and metrics
 
@@ -121,7 +123,7 @@ Same cleaned depth, four ways to align it (`src/icp_variants.py`, `src/results/i
   (e.g. ICL 0.95 vs 14.94 cm point-to-plane, 1.93 vs 28.50 cm point-to-point). The median never fixes tracking.
 
 These numbers come from the log of a Kaggle run that finished all tracking except generalized ICP and then crashed at
-the table step. Colored ICP is excluded because it uses the colour image.
+the table step.
 
 ### 4. Why does the median not help ICP?
 
@@ -161,14 +163,15 @@ depth-only ICP, ATE in cm.
 | background (far side of the hole) | 83.1 | 15.24 | 13.51 | 40 ms |
 | temporal (paper's prediction, frames t±2) | **12.2** | 15.11 | 13.37 | 7.9 s |
 
-**No fill reliably helps ICP.** On ICL every fill is equal to or worse than keeping the holes. The one gain,
+**Filling the holes does not improve tracking.** On ICL every fill is equal to or worse than keeping the holes. The one apparent gain,
 Navier–Stokes on TUM (12.03 vs 13.33 cm), does not hold on ICL (15.36 vs 14.94 cm), so we do not count it. Telea
 inpainting, the obvious first choice, is among the least accurate (87 mm), because it blends the near and far sides of a
 depth edge.
 
-<img src="experiments/hole_filling/results/fills.png" alt="Hole-filling comparison" width="100%">
 
 ## Conclusion
+
+Which cleaner to use depends on the goal:
 
 | goal | use | why |
 |---|---|---|
@@ -190,7 +193,6 @@ Depth-only ICP, ATE in cm:
 | median 9×9 (ours) | 13.32 | 14.94 |
 | no cleaning | 13.97 | 17.07 |
 
-- **Does either cleaner use the RGB image?** No. Both are depth-only, and so is the main tracker.
 - **What kind of ICP is it?** Open3D point-to-plane ICP on point clouds, frame to frame. Point-to-plane only counts the
   distance along the surface normal, so it needs good normals. The SVD-based point-to-point variant was also run and is
   worse everywhere (section 3).
@@ -225,7 +227,7 @@ All numbers above are in `src/results/icl_compare.txt`, `src/results/tum_compare
 | `src/` | the code: `clean.py` (ours), `paper_pipeline.py` (the paper), `icl_compare.py` / `tum_compare.py` (the experiments), `plot_paths.py` (path figures); `results/` holds all numbers and figures |
 | `experiments/` | the hole-filling comparison, the normals check, the earlier filter study that chose the median, and our first versions of the paper pipeline |
 | `kaggle/` | scripts for the slow runs on Kaggle |
-| `results.pdf` | tables and figures from before the restructuring |
+| `results.pdf` | summary of the tables and figures |
 
 
 ## Credits
