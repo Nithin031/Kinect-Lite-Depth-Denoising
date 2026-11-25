@@ -33,7 +33,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEMO = os.path.dirname(HERE)
 ROOT = os.path.dirname(DEMO)
-RGB_DIR = os.path.join(ROOT, "ICL NUIM", "lr_kt0_noisy", "rgb")
+RGB_DIR = os.path.join(os.environ.get("KINECT_DATA") or os.path.join(ROOT, "datasets"), "ICL NUIM", "lr_kt0_noisy", "rgb")
 INK, MUTED, ORANGE, BLUE, GREY = "#15202B", "#4A5563", "#D9692A", "#2C64A8", "#8E98A3"
 FX, FY, CX, CY = 240.6, 240.0, 159.5, 119.5      # ICL-NUIM intrinsics at the half resolution stored in the run
 CELL = 0.02                                       # map cell size in metres

@@ -33,7 +33,7 @@ import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUTS = os.path.join(ROOT, "cache")   # restored frames (regenerable)
-DATA_ROOT = os.environ.get("KINECT_DATA") or ROOT   # folder holding "ICL NUIM" and "RGB TUM" (default: this folder)
+DATA_ROOT = os.environ.get("KINECT_DATA") or os.path.join(ROOT, "datasets")   # folder holding "ICL NUIM" and "RGB TUM" (default: datasets/)
 
 ICL_NOISY = os.path.join(DATA_ROOT, "ICL NUIM", "lr_kt0_noisy", "depth")
 ICL_CLEAN = os.path.join(DATA_ROOT, "ICL NUIM", "lr_kt0_noisefree", "depth")

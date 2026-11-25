@@ -98,7 +98,7 @@ class Seq:
 
     def rgb(self, i):
         if self.kind == "icl":
-            return cv2.imread(os.path.join(ROOT, "ICL NUIM", "lr_kt0_noisy", "rgb", f"{i}.png"))
+            return cv2.imread(os.path.join(D.DATA_ROOT, "ICL NUIM", "lr_kt0_noisy", "rgb", f"{i}.png"))
         t = self.depth_rows[i][0]
         j = bisect.bisect_left(self.rgb_t, t)
         j = min(range(max(0, j - 1), min(len(self.rgb_t), j + 1)), key=lambda q: abs(self.rgb_t[q] - t))
@@ -153,7 +153,7 @@ def discover():
         clip = Seq(f"icl_{first}", f"ICL living room · {title}", "icl", first=first, last=last)
         clip.cache = seqs[0].cache
         seqs.append(clip)
-    for base, tag in ((os.path.join(ROOT, "RGB TUM"), "TUM"), (os.path.join(DEMO, "sequences"), "Mine")):
+    for base, tag in ((os.path.join(D.DATA_ROOT, "RGB TUM"), "TUM"), (os.path.join(DEMO, "sequences"), "Mine")):
         if not os.path.isdir(base):
             continue
         for d in sorted(os.listdir(base)):

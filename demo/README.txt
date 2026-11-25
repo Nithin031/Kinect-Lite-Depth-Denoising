@@ -30,7 +30,7 @@ Files:
 - app/live_stream.py and app/dashboard.py are an old version, not used
 
 Needs these folders next to this one:
-- ICL NUIM (ground truth and images), RGB TUM, src (code), videos (video_demo_full.mp4)
+- datasets (ICL NUIM and RGB TUM inside it), src (code), videos (video_demo_full.mp4)
 
 Python: Anaconda environment "kinectlite" in D:\Anaconda.
 If Anaconda is somewhere else, change that line in run_live_ui.bat.

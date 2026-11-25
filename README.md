@@ -150,15 +150,16 @@ python experiments/hole_filling/compare_fills.py --frames 300 --step 2
 python experiments/normals_check/check_normals.py
 ```
 
-The slow ones were run on Kaggle. The datasets are not included. Download them into this folder:
-[ICL-NUIM](https://www.doc.ic.ac.uk/~ahanda/VaFRIC/iclnuim.html) (living room kt0) into `ICL NUIM/` and
-[TUM RGB-D](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) (fr3 long_office_household) into `RGB TUM/`.
+The slow ones were run on Kaggle. The datasets are not included. Download them into the `datasets/` folder:
+[ICL-NUIM](https://www.doc.ic.ac.uk/~ahanda/VaFRIC/iclnuim.html) (living room kt0) into `datasets/ICL NUIM/` and
+[TUM RGB-D](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) (fr3 long_office_household) into `datasets/RGB TUM/`.
 All numbers are saved in `src/results/` and `experiments/*/results/`.
 
 ## Folders
 
 | folder / file | contents |
 |---|---|
+| `datasets/` | ICL NUIM and RGB TUM (not in git) |
 | `src/` | main code: `clean.py` (median), `paper_pipeline.py` (Fu et al.), `icl_compare.py`, `tum_compare.py`, `icp_variants.py`, data loading, and `results/` |
 | `experiments/` | hole filling, normals check, earlier filter study |
 | `demo/` | live demo (see above) |
