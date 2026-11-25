@@ -118,6 +118,41 @@ on TUM (12.03 vs 13.33 cm) but was worse on ICL (15.36 vs 14.94 cm), so we do no
 | camera tracking (main goal) | Fu et al. | 4 to 16 times less drift, but slow (about 26 min for 450 frames) |
 | only the depth error | 9x9 median | halves the error, under 1 min for 450 frames |
 
+## Setup
+
+You need Python 3.12 and about 1 GB free for the datasets. Do this once.
+
+**Windows (PowerShell)**
+```
+cd "D:\MIni Project"
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+(If you use Anaconda: `conda create -n kinectlite python=3.12`, `conda activate kinectlite`, then `pip install -r requirements.txt`.)
+
+**Mac (Terminal)**
+```
+cd "/path/to/MIni Project"
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+If Python 3.12 is missing on the Mac: `brew install python@3.12`.
+
+Then put the datasets in the `datasets/` folder (see "How to run the experiments" below) and, for the live demo, the cleaned
+frames in `demo/data/cache/icl/` (they come with the project folder).
+
+Start the live demo:
+- Windows: double-click `demo/run_live_ui.bat`. It uses the Anaconda environment `kinectlite` in `D:\Anaconda`; if yours is
+  different, edit the `activate` line in the file. With a normal venv, instead run `.venv\Scripts\activate` and then
+  `python demo\app\live_server.py`.
+- Mac: activate the environment, then run `chmod +x demo/run_live_ui.sh` (first time only) and `./demo/run_live_ui.sh`.
+  Or just `python3 demo/app/live_server.py`.
+
+Open http://127.0.0.1:8765/ if the browser does not open by itself. `demo/open_dashboard.bat` (video page) is Windows only; on
+Mac open `demo/presentation_dashboard.html` in the browser.
+
 ## Live demo
 
 Folder `demo/`. It tracks the camera live with ICP for three inputs (no cleaning, median, Fu et al.) and shows the path,

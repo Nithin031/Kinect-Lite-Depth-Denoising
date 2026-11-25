@@ -6,7 +6,10 @@ To run:
 3. Choose ICL living room, start frame 450, 60 frames, Accurate
 4. Click "Start live run"
 
-To stop, close the black window.
+On Mac: activate the Python environment, then run  ./demo/run_live_ui.sh  (first time: chmod +x demo/run_live_ui.sh)
+or just  python3 demo/app/live_server.py   (full setup steps are in the main README.md)
+
+To stop, close the black window (Mac: Ctrl+C).
 
 What you see:
 Camera tracking (ICP) running live on three kinds of depth: no cleaning, median filter, and Fu et al.
