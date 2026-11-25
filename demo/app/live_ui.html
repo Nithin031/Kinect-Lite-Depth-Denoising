@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kinect Lite Live</title>
+<style>
+  :root { --ink:#15202B; --grey:#8E98A3; --blue:#2C64A8; --orange:#D9692A; --muted:#4A5563; --green:#1E8E4E; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; margin:0; }
+  body { background:#fff; color:var(--ink); font-family:"DejaVu Sans", Verdana, system-ui, sans-serif; overflow:auto; }
+  .page { height:100vh; min-height:640px; display:flex; flex-direction:column; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:8px 14px; background:#F3F5F8; border-bottom:1px solid #D5DAE0; font-size:14px; flex:none; }
+  .toolbar b { margin-right:auto; font-size:16px; } .toolbar b span { color:var(--orange); }
+  .toolbar label { color:var(--muted); } .toolbar input { width:70px; padding:6px; border:1px solid #C5CCD4; border-radius:6px; font:inherit; }
+  button, a.btn { border:1px solid #C5CCD4; background:#fff; border-radius:7px; padding:7px 14px; font:inherit; cursor:pointer; color:var(--ink); text-decoration:none; }
+  button.go { background:var(--orange); border-color:var(--orange); color:#fff; font-weight:700; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .chip { padding:6px 12px; border-radius:18px; border:1px solid #C5CCD4; background:#fff; font-size:13px; }
+  .chip.run { border-color:var(--orange); color:var(--orange); } .chip.done { border-color:var(--green); color:var(--green); }
+  #err { display:none; flex:none; margin:6px 14px 0; background:#FDECEC; border:1px solid #E58B8B; color:#8a1f1f; padding:7px 12px; border-radius:8px; font-size:14px; }
+  .head { display:flex; justify-content:space-between; align-items:baseline; padding:6px 1.2vw 0; flex:none; font-weight:700; font-size:clamp(16px, 1.55vw, 30px); }
+  .head .r { color:var(--orange); }
+  .row { display:grid; gap:1vw; padding:0 1vw; min-height:0; }
+  .row1 { grid-template-columns:1fr 1fr; flex:1.18; }
+  .row2 { grid-template-columns:1fr 1fr; flex:1.25; }
+  .cell { display:flex; flex-direction:column; min-width:0; min-height:0; }
+  .t { text-align:center; font-weight:700; font-size:clamp(13px, 1.2vw, 24px); padding:5px 0 3px; white-space:nowrap; flex:none; }
+  .box { position:relative; flex:1; min-height:0; background:#E3E7EC; border:1.5px solid #C9CED4; }
+  .box.blue { border:4px solid var(--blue); } .box.orange { border:4px solid var(--orange); } .box.black { background:#000; }
+  .box img, .box canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .box img.cover { object-fit:cover; } .box img.contain { object-fit:contain; }
+  .box.plain { background:#fff; border:none; }
+  .cap { padding:2px 1.2vw 0; font-size:clamp(11px, .95vw, 18px); color:var(--muted); flex:none; }
+  .foot { padding:0 1.2vw; font-size:clamp(10px, .85vw, 16px); color:var(--muted); flex:none; line-height:1.35; }
+  .metrics { flex:none; display:grid; grid-template-columns:1fr; gap:1vw; padding:6px 1vw 0; }
+  .m { border:1px solid #D5DAE0; border-radius:8px; padding:6px 10px; font-size:clamp(12px, 1vw, 19px); display:flex; flex-wrap:wrap; gap:4px 16px; align-items:baseline; }
+  .m b { margin-right:6px; } .m span em { font-style:normal; color:var(--muted); font-size:.82em; margin-left:3px; }
+  .m .best { color:var(--green); font-weight:700; }
+  .verdict { flex:none; padding:5px 1.2vw 8px; font-size:clamp(11px, .95vw, 18px); color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="toolbar">
+    <b>Kinect Lite <span>Live</span></b>
+    <label>Video <select id="seq"></select></label>
+    <label>Start frame <input id="start" type="number" value="450" min="303" max="597"></label>
+    <label>Frames <input id="frames" type="number" value="30" min="2" max="295"></label>
+    <label>Speed <select id="fast"><option value="0">Accurate (as in report)</option></select></label>
+    <button class="go" id="goLive">▶ Start live run</button>
+    <button id="goReplay" title="Plays back a saved run (no computing), as a fallback">↻ Instant replay</button>
+    <button id="stopBtn" disabled>■ Stop</button>
+    <a class="btn" href="/presentation_dashboard.html">Video dashboard</a>
+    <span class="chip" id="chip">Ready</span>
+  </div>
+  <div id="err"></div>
+  <div class="cap" id="hint" style="padding-top:4px"></div>
+
+  <div class="head"><div id="title">LIVE &nbsp;·&nbsp; ICL-NUIM living room (synthetic)</div><div class="r" id="hr">press Start</div></div>
+
+  <div class="row row1">
+    <div class="cell"><div class="t">Raw camera feed (RGB)</div><div class="box"><img class="cover" id="iRgb" alt=""></div></div>
+    <div class="cell"><div class="t" style="color:var(--grey)">Raw depth map</div><div class="box"><img class="cover" id="iRaw" alt=""></div></div>
+  </div>
+  <div class="cap">Depth colour runs from blue (near) to yellow (far). Black marks missing depth.</div>
+
+  <div class="row row2">
+    <div class="cell"><div class="t">Camera movement (top view)</div><div class="box plain"><canvas id="cPath"></canvas></div></div>
+    <div class="cell"><div class="t">Fu et al. aligned tracking error</div><div class="box plain"><canvas id="cErr"></canvas></div></div>
+  </div>
+
+  <div class="metrics" id="mt"></div>
+  <div class="verdict" id="verdict">Press Start live run. The tracking is computed while you watch; the numbers fill in with every frame.</div>
+</div>
+
+<script>
+let C = ["#D9692A"], N = ["Fu et al."], SEQS = [];
+const $ = (s) => document.querySelector(s);
+let lastK = -2, S = null;
+
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+  return r.json();
+}
+async function begin(mode) {
+  const res = await post("/api/start", { mode, seq: $("#seq").value, start: +$("#start").value, frames: +$("#frames").value, speed: 0.1, fast: $("#fast").value === "1" });
+  const e = $("#err");
+  if (!res.ok) { e.textContent = res.error; e.style.display = "block"; } else { e.style.display = "none"; lastK = -2; }
+}
+$("#goLive").onclick = () => begin("live");
+$("#goReplay").onclick = () => begin("replay");
+$("#stopBtn").onclick = () => post("/api/stop");
+
+// ---- canvas helpers: matplotlib-like look ------------------------------------------------------------------------------
+function setup(c) {
+  const r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  c.width = Math.max(1, Math.round(r.width * d)); c.height = Math.max(1, Math.round(r.height * d));
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return [x, r.width, r.height];
+}
+const pt = (p) => (p / 72) * (window.innerWidth / 19.2);          // a matplotlib point at this window width
+function niceStep(range) { const raw = range / 5, e = Math.pow(10, Math.floor(Math.log10(raw))); for (const m of [1, 2, 5, 10]) if (raw <= m * e) return m * e; return 10 * e; }
+function frame(x, X0, Y0, X1, Y1) { x.strokeStyle = "#000"; x.lineWidth = 1; x.strokeRect(X0 + .5, Y0 + .5, X1 - X0, Y1 - Y0); }
+const fmtTick = (v, step) => (Math.abs(v) < 1e-9 ? "0.00" : v.toFixed(step < 1 ? 2 : 1)).replace("-", "−");
+
+function pathChart(s) {
+  const [x, w, h] = setup($("#cPath"));
+  const legW = Math.min(w * 0.30, pt(12) * 17), L = pt(52), R = legW + pt(14), T = pt(10), B = pt(46);
+  const n = s.rows.length;
+  const tr = s.truth.slice(0, n);
+  const pts = tr.concat(...s.est);
+  const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
+  let sx = Math.max(...xs) - Math.min(...xs), sz = Math.max(...zs) - Math.min(...zs);
+  sx = Math.max(sx, 0.04); sz = Math.max(sz, 0.04);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  const aw = w - L - R, ah = h - T - B;
+  const sc = Math.min(aw / (sx * 1.25), ah / (sz * 1.25));            // equal scale on both axes, uses the whole plot area
+  const hx = aw / sc / 2, hz = ah / sc / 2;
+  const X0 = L, Y0 = T;
+  const px = (p) => [X0 + (p[0] - (cx - hx)) * sc, Y0 + ah - (p[1] - (cz - hz)) * sc];
+  const step = niceStep(Math.max(hx, hz) * 2);
+  x.font = `${pt(12)}px "DejaVu Sans", sans-serif`; x.fillStyle = "#000";
+  x.strokeStyle = "#DDE1E6"; x.lineWidth = 1;
+  for (let v = Math.ceil((cx - hx) / step) * step; v <= cx + hx; v += step) { const X = X0 + (v - (cx - hx)) * sc; x.beginPath(); x.moveTo(X, Y0); x.lineTo(X, Y0 + ah); x.stroke(); x.textAlign = "center"; x.fillText(fmtTick(v, step), X, Y0 + ah + pt(16)); }
+  for (let v = Math.ceil((cz - hz) / step) * step; v <= cz + hz; v += step) { const Y = Y0 + ah - (v - (cz - hz)) * sc; x.beginPath(); x.moveTo(X0, Y); x.lineTo(X0 + aw, Y); x.stroke(); x.textAlign = "right"; x.fillText(fmtTick(v, step), X0 - pt(6), Y + pt(4)); }
+  frame(x, X0, Y0, X0 + aw, Y0 + ah);
+  x.save(); x.beginPath(); x.rect(X0, Y0, aw, ah); x.clip();
+  for (let m = 0; m < N.length; m++) {
+    x.strokeStyle = C[m]; x.lineWidth = pt(N[m].startsWith("Fu") ? 4.5 : 2.8); x.lineJoin = "round"; x.beginPath();
+    s.est[m].forEach((p, k) => (k ? x.lineTo(...px(p)) : x.moveTo(...px(p)))); x.stroke();
+  }
+  x.strokeStyle = "#15202B"; x.lineWidth = pt(2.4); x.setLineDash([pt(7), pt(4)]); x.beginPath();
+  tr.forEach((p, k) => (k ? x.lineTo(...px(p)) : x.moveTo(...px(p)))); x.stroke(); x.setLineDash([]);
+  for (let m = 0; m < N.length; m++) { const p = s.est[m][s.est[m].length - 1]; x.fillStyle = C[m]; x.strokeStyle = "#fff"; x.lineWidth = 2; x.beginPath(); x.arc(...px(p), pt(6), 0, 7); x.fill(); x.stroke(); }
+  const st = px(tr[0]); x.fillStyle = "#15202B"; x.font = `${pt(20)}px sans-serif`; x.textAlign = "center"; x.fillText("★", st[0], st[1] + pt(7));
+  x.restore();
+  // legend panel on the right (never covers the path)
+  const last = s.rows[n - 1], LX = X0 + aw + pt(14);
+  const lines = N.map((nm, m) => [C[m], nm, `${last.err[m].toFixed(2)} cm off`, N[m].startsWith("Fu") ? 4.5 : 2.8]);
+  x.textAlign = "left"; x.font = `bold ${pt(12)}px "DejaVu Sans", sans-serif`; x.fillStyle = "#000"; x.fillText("Distance from truth", LX, Y0 + pt(14));
+  lines.forEach(([col, nm, val, lw], i) => {
+    const y = Y0 + pt(40) + i * pt(40);
+    x.strokeStyle = col; x.lineWidth = pt(lw); x.beginPath(); x.moveTo(LX, y - pt(4)); x.lineTo(LX + pt(26), y - pt(4)); x.stroke();
+    x.fillStyle = "#000"; x.font = `${pt(12)}px "DejaVu Sans", sans-serif`; x.fillText(nm, LX + pt(34), y - pt(1));
+    x.fillStyle = col; x.font = `bold ${pt(13)}px "DejaVu Sans", sans-serif`; x.fillText(val, LX + pt(34), y + pt(15));
+  });
+  const y = Y0 + pt(40) + N.length * pt(40);
+  x.strokeStyle = "#15202B"; x.lineWidth = pt(2.4); x.setLineDash([pt(7), pt(4)]); x.beginPath(); x.moveTo(LX, y - pt(4)); x.lineTo(LX + pt(26), y - pt(4)); x.stroke(); x.setLineDash([]);
+  x.fillStyle = "#000"; x.font = `${pt(12)}px "DejaVu Sans", sans-serif`; x.fillText("true path", LX + pt(34), y - pt(1));
+  x.fillText("★ = start", LX, y + pt(24));
+  x.font = `${pt(13)}px "DejaVu Sans", sans-serif`; x.textAlign = "center";
+  x.fillText("x (m)", X0 + aw / 2, h - pt(4));
+  x.save(); x.translate(pt(13), Y0 + ah / 2); x.rotate(-Math.PI / 2); x.fillText("z (m)", 0, 0); x.restore();
+}
+
+function errChart(s) {
+  const [x, w, h] = setup($("#cErr"));
+  const L = w * 0.15, R = w * 0.03, T = h * 0.02, B = h * 0.19, n = s.n;
+  const all = s.rows.flatMap((r) => r.err).filter((v) => v > 0);
+  const lo = Math.max(0.001, Math.min(...all, 0.1) * 0.7), hi = Math.max(...all, 2) * 1.6;
+  const ly = (v) => T + (h - T - B) * (1 - (Math.log10(Math.max(v, lo)) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)));
+  const lx = (k) => L + (w - L - R) * (n <= 1 ? 0 : k / (n - 1));
+  x.font = `${pt(12)}px "DejaVu Sans", sans-serif`; x.fillStyle = "#000";
+  const sup = { "-3": "⁻³", "-2": "⁻²", "-1": "⁻¹", 0: "⁰", 1: "¹", 2: "²", 3: "³" };
+  for (let e = Math.floor(Math.log10(lo)) - 1; e <= Math.ceil(Math.log10(hi)); e++) {
+    for (let m = 1; m < 10; m++) {
+      const v = m * Math.pow(10, e); if (v < lo || v > hi) continue;
+      x.strokeStyle = m === 1 ? "#CFD4DA" : "#EEF0F3"; x.lineWidth = 1; x.beginPath(); x.moveTo(L, ly(v)); x.lineTo(w - R, ly(v)); x.stroke();
+      if (m === 1) { x.textAlign = "right"; x.fillText("10" + (sup[e] ?? ""), L - pt(5), ly(v) + pt(4)); }
+    }
+  }
+  const step = niceStep(Math.max(n - 1, 1));
+  x.strokeStyle = "#E3E6EA";
+  for (let v = 0; v <= n - 1; v += step) { x.beginPath(); x.moveTo(lx(v), T); x.lineTo(lx(v), h - B); x.stroke(); x.textAlign = "center"; x.fillStyle = "#000"; x.fillText(String(Math.round(v)), lx(v), h - B + pt(15)); }
+  frame(x, L, T, w - R, h - B);
+  x.save(); x.beginPath(); x.rect(L, T, w - L - R, h - T - B); x.clip();
+  for (let m = 0; m < N.length; m++) {
+    x.strokeStyle = C[m]; x.lineWidth = pt(N[m].startsWith("Fu") ? 4 : 2.5); x.lineJoin = "round"; x.beginPath();
+    s.rows.forEach((r, k) => (k ? x.lineTo(lx(k), ly(r.err[m])) : x.moveTo(lx(k), ly(r.err[m])))); x.stroke();
+    const k = s.rows.length - 1; x.fillStyle = C[m]; x.beginPath(); x.arc(lx(k), ly(s.rows[k].err[m]), pt(5), 0, 7); x.fill();
+  }
+  x.restore();
+  x.font = `${pt(13)}px "DejaVu Sans", sans-serif`; x.fillStyle = "#000"; x.textAlign = "center";
+  x.fillText("frame in clip", L + (w - L - R) / 2, h - pt(3));
+  x.save(); x.translate(pt(11), T + (h - T - B) / 2); x.rotate(-Math.PI / 2); x.fillText("error (cm, log)", 0, 0); x.restore();
+}
+
+// ---- the live numbers --------------------------------------------------------------------------------------------------
+const f1 = (v) => (v == null ? "–" : v.toFixed(1)), f2 = (v) => (v == null ? "–" : v.toFixed(2));
+function metrics(s) {
+  const last = s.rows[s.rows.length - 1];
+  let cols = [["aligned error now", "cm", last.err, f2], ["aligned RMS error", "cm", last.ate, f2], ["per step", "mm", last.rpe_rms, f1]];
+  cols = cols.filter(([, , v]) => v.some((q) => q != null));
+  const best = cols.map(([, , v]) => Math.min(...v.filter((q) => q != null)));
+  $("#mt").innerHTML = N.map((_, m) => `<div class="m"><b style="color:${C[m]}">${N[m]}</b>` +
+    cols.map(([n, u, v, f], i) => `<span class="${v[m] != null && v[m] === best[i] ? "best" : ""}">${f(v[m])}<em>${u} ${n}</em></span>`).join("") + `</div>`).join("");
+}
+
+function render(s) {
+  S = s;
+  if (s.methods && s.methods.length) { N = s.methods; C = s.colors; }
+  if (s.seq_name && (s.running || s.done)) $("#title").innerHTML = `LIVE &nbsp;·&nbsp; ${s.seq_name}`;
+  $("#goLive").disabled = $("#goReplay").disabled = s.running;
+  $("#stopBtn").disabled = !s.running;
+  const k = s.rows.length, chip = $("#chip");
+  if (s.error) { const e = $("#err"); e.textContent = "Problem: " + s.error; e.style.display = "block"; }
+  if (s.running) {
+    const per = k ? s.rows.reduce((a, r) => a + r.sec, 0) / k : 0;
+    chip.className = "chip run"; chip.textContent = `${s.mode === "replay" ? "Replay" : "Live"}` + (k ? ` · ${per.toFixed(1)} s per frame` : " · starting trackers…");
+  } else if (s.done && k) { chip.className = "chip done"; chip.textContent = `Done · ${k} frames`; }
+  else { chip.className = "chip"; chip.textContent = "Ready"; }
+  if (!k || s.k === lastK) return;
+  $("#hr").textContent = `frame ${s.rows[k - 1].frame}   (${k}/${s.n})`;
+  pathChart(s); errChart(s); metrics(s);
+  lastK = s.k;
+  $("#iRgb").src = `/api/img/rgb/${s.k}`;
+  $("#iRaw").src = `/api/img/raw/${s.k}`;
+  $("#verdict").textContent = s.mode === "replay" ? "Replay uses the same full-clip alignment as the Kaggle video." :
+    "ICP runs live for no cleaning, median and Fu et al. (depth cleaned in advance, not during the run). The plotted path is aligned to ground truth using the frames tracked so far.";
+}
+
+async function poll() {
+  try { render(await (await fetch("/api/status")).json()); }
+  catch (e) { $("#chip").className = "chip"; $("#chip").textContent = "Server not running: start run_live_ui.bat"; }
+  finally { setTimeout(poll, 200); }
+}
+async function loadSeqs() {
+  try {
+    SEQS = await (await fetch("/api/sequences")).json();
+    $("#seq").innerHTML = SEQS.map((q) => `<option value="${q.id}">${q.name}</option>`).join("");
+    if (SEQS.some((q) => q.id === "icl_450")) $("#seq").value = "icl_450";
+    pickSeq();
+  } catch (e) { /* server not up yet: poll() shows the message */ }
+}
+function pickSeq() {
+  const q = SEQS.find((x) => x.id === $("#seq").value); if (!q) return;
+  const st = $("#start"), fr = $("#frames");
+  st.min = q.first; st.max = q.last; st.value = q.id === "icl" ? 450 : q.first;
+  fr.max = Math.floor((q.last - q.first) / q.step) + 1; fr.value = Math.min(12, fr.max);
+  $("#goReplay").style.display = q.id === "icl" ? "" : "none";
+  $("#hint").textContent = q.note || "Fu et al. tracking";
+
+}
+$("#seq").onchange = pickSeq;
+window.addEventListener("resize", () => { if (S && S.rows.length) { pathChart(S); errChart(S); } });
+loadSeqs();
+poll();
+</script>
+</body>
+</html>

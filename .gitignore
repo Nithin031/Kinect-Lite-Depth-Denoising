@@ -17,6 +17,7 @@ __pycache__/
 kaggle/output/
 kaggle/output_fills/
 kaggle/output_full/
+kaggle/output_variants/
 kaggle/code/*.py
 
 # LaTeX build files

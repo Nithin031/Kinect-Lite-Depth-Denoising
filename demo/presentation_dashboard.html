@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kinect Lite Demo Dashboard</title>
+<style>
+  :root {
+    --ink: #15202B; --panel: #1E2B38; --panel2: #263646; --line: #34495C;
+    --text: #F2F4F7; --muted: #A9B6C4; --orange: #D9692A; --blue: #5FA0E8;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--ink); color: var(--text); font-family: system-ui, "Segoe UI", Arial, sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 20px; margin: 0; margin-right: auto; letter-spacing: .2px; }
+  header h1 span { color: var(--orange); }
+  button, .btn { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px;
+    font: inherit; font-size: 14px; cursor: pointer; }
+  button:hover, .btn:hover { border-color: var(--orange); }
+  button.on { background: var(--orange); border-color: var(--orange); color: #fff; }
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 360px; gap: 16px; padding: 16px 20px 20px; }
+  body.focus main { grid-template-columns: 1fr; }
+  body.focus aside { display: none; }
+  .stage { background: #000; border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .view { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #000; }
+  .view video, .view img { max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; }
+  .view iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .empty { color: var(--muted); text-align: center; padding: 24px; line-height: 1.6; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; background: var(--panel); border-top: 1px solid var(--line); }
+  .bar .label { color: var(--muted); font-size: 13px; margin: 0 4px 0 8px; }
+  .title { padding: 8px 14px; background: var(--panel); font-weight: 600; border-bottom: 1px solid var(--line); }
+  aside { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--orange); margin: 0 0 10px; }
+  #list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+  #list li { display: flex; align-items: center; gap: 8px; background: var(--panel2); border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+  #list li.active { border-color: var(--orange); }
+  #list .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  #list .meta { color: var(--muted); font-size: 12px; }
+  #list .x { background: none; border: none; color: var(--muted); padding: 0 4px; font-size: 16px; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.5; }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 14px; text-align: center; color: var(--muted); font-size: 14px; margin-top: 10px; }
+  body.dragging .drop { border-color: var(--orange); color: var(--text); }
+  ol.legend { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.55; }
+  ol.legend b { color: var(--blue); }
+  textarea { width: 100%; min-height: 150px; resize: vertical; background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px; font: inherit; font-size: 14px; line-height: 1.5; }
+  code { background: var(--panel2); padding: 8px 10px; border-radius: 8px; display: block; font-size: 13px; overflow-x: auto; margin-bottom: 8px; }
+  input[type=file] { display: none; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } .stage { min-height: 60vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kinect Lite <span>Demo Dashboard</span></h1>
+  <a class="btn" href="http://127.0.0.1:8765/" title="Needs run_live_ui.bat running">Live metrics ▶</a>
+  <label class="btn" for="file">+ Add videos / images / PDFs</label>
+  <input id="file" type="file" accept="video/*,image/*,application/pdf" multiple>
+  <button id="focusBtn" title="Hide the side panel (key: s)">Presenter mode</button>
+  <button id="fsBtn" title="Full screen (key: f)">Full screen</button>
+</header>
+
+<main>
+  <section class="stage" id="stage">
+    <div class="title" id="title">Nothing selected</div>
+    <div class="view" id="view">
+      <div class="empty">Add the demo video with the button on top, or drag and drop files anywhere on this page.<br>
+        If <b>D:MIni Projectideosideo_demo_full.mp4</b> exists, it loads by itself.</div>
+    </div>
+    <div class="bar" id="bar">
+      <button id="back">⏪ 5 s</button><button id="play">Play / Pause</button><button id="fwd">5 s ⏩</button>
+      <button id="fb" title="one frame back (,)">◀ frame</button><button id="ff" title="one frame forward (.)">frame ▶</button>
+      <span class="label">Speed</span>
+      <button class="spd" data-s="0.25">0.25×</button><button class="spd" data-s="0.5">0.5×</button>
+      <button class="spd on" data-s="1">1×</button><button class="spd" data-s="2">2×</button>
+      <button id="loop">Loop: off</button>
+    </div>
+  </section>
+
+  <aside>
+    <div class="card">
+      <h2>Playlist</h2>
+      <ul id="list"></ul>
+      <div class="drop">Drop videos, images or PDFs here</div>
+      <div class="hint">Files you add stay until you reload the page. Keys: space = play, ← → = 5 s, , . = one frame, 1 2 3 4 = speed, n = next, f = full screen, s = presenter mode.</div>
+    </div>
+
+    <div class="card">
+      <h2>What the demo screen shows</h2>
+      <ol class="legend">
+        <li><b>Raw camera feed</b> – what a normal camera sees</li>
+        <li><b>Raw depth</b> – the sensor's view, with its noise</li>
+        <li><b>Median-cleaned depth</b> – the cleanest-looking depth</li>
+        <li><b>Camera movement</b> – the path ICP works out, against the true path</li>
+        <li><b>ICP error</b> – how far each path is from the truth, over time</li>
+        <li><b>ICP maps</b> – the room rebuilt from those positions</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>Talking points (editable)</h2>
+      <textarea id="notes"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>If he asks for it live</h2>
+      <code id="cmd">demo\run_live_ui.bat</code>
+      <button id="copy">Copy command</button>
+      <div class="hint">Runs the tracking on 30 frames from frame 450, then plays the same screen. It needs a minute or two, so keep it as the backup.</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+// Videos that load by themselves if they sit in the same folder as this page (edit the list if your file names differ).
+const DEFAULTS = [
+  { title: "Full demo: ICL living room", src: "../videos/video_demo_full.mp4" },
+];
+const DEFAULT_NOTES = [
+  "• Same tracker, three inputs: raw depth, median-cleaned depth, Fu et al.-cleaned depth.",
+  "• The depth sensor is noisy. ICP lines up each frame with the next, and chaining gives the camera path.",
+  "• Watch the dashed true path: Fu et al.'s path (orange) stays on it, the others drift.",
+  "• The median gives the cleanest-looking depth, but a worse camera path.",
+  "• Message: judge a cleaner by the task it serves, not by how clean the image looks.",
+].join("\n");
+
+const $ = (s) => document.querySelector(s);
+const items = [];
+let cur = -1;
+const view = $("#view");
+
+function kindOf(name, type) {
+  if ((type || "").startsWith("video") || /\.(mp4|webm|mov|m4v|ogv)$/i.test(name)) return "video";
+  if ((type || "").startsWith("image") || /\.(png|jpe?g|gif|webp|svg)$/i.test(name)) return "image";
+  if (type === "application/pdf" || /\.pdf$/i.test(name)) return "pdf";
+  return null;
+}
+const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const player = () => view.querySelector("video");
+
+function addItem(it) {
+  if (items.some((x) => x.url === it.url)) return;
+  items.push(it);
+  render();
+  if (cur < 0) show(0);
+}
+
+function render() {
+  $("#list").innerHTML = items.map((it, i) =>
+    `<li class="${i === cur ? "active" : ""}" data-i="${i}"><span class="name">${esc(it.title)}</span>` +
+    `<span class="meta">${it.kind}${it.dur ? " · " + it.dur : ""}</span><button class="x" data-x="${i}" title="Remove">✕</button></li>`).join("");
+}
+
+function show(i) {
+  if (i < 0 || i >= items.length) return;
+  cur = i;
+  const it = items[i];
+  $("#title").textContent = it.title;
+  $("#bar").style.display = it.kind === "video" ? "flex" : "none";
+  if (it.kind === "video") {
+    view.innerHTML = `<video src="${it.url}" controls playsinline></video>`;
+    const v = player();
+    v.playbackRate = speed;
+    v.loop = loop;
+    v.onloadedmetadata = () => { it.dur = fmt(v.duration); render(); };
+  } else if (it.kind === "image") {
+    view.innerHTML = `<img src="${it.url}" alt="">`;
+  } else {
+    view.innerHTML = `<iframe src="${it.url}"></iframe>`;
+  }
+  render();
+}
+const fmt = (s) => (isFinite(s) ? Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0") : "");
+
+function addFiles(files) {
+  [...files].forEach((f) => {
+    const k = kindOf(f.name, f.type);
+    if (k) addItem({ title: f.name.replace(/\.[^.]+$/, ""), url: URL.createObjectURL(f), kind: k });
+  });
+}
+
+// list clicks
+$("#list").addEventListener("click", (e) => {
+  const x = e.target.closest("[data-x]");
+  if (x) {
+    const i = +x.dataset.x;
+    items.splice(i, 1);
+    if (!items.length) { cur = -1; view.innerHTML = '<div class="empty">Add a video to start.</div>'; $("#title").textContent = "Nothing selected"; }
+    else show(Math.min(cur === i ? i : (cur > i ? cur - 1 : cur), items.length - 1));
+    render();
+    return;
+  }
+  const li = e.target.closest("li");
+  if (li) show(+li.dataset.i);
+});
+
+$("#file").addEventListener("change", (e) => { addFiles(e.target.files); e.target.value = ""; });
+["dragenter", "dragover"].forEach((t) => window.addEventListener(t, (e) => { e.preventDefault(); document.body.classList.add("dragging"); }));
+["dragleave", "drop"].forEach((t) => window.addEventListener(t, (e) => { e.preventDefault(); document.body.classList.remove("dragging"); }));
+window.addEventListener("drop", (e) => addFiles(e.dataTransfer.files));
+
+// player controls
+let speed = 1, loop = false;
+$("#play").onclick = () => { const v = player(); if (v) (v.paused ? v.play() : v.pause()); };
+$("#back").onclick = () => { const v = player(); if (v) v.currentTime = Math.max(0, v.currentTime - 5); };
+$("#fwd").onclick = () => { const v = player(); if (v) v.currentTime = Math.min(v.duration || 1e9, v.currentTime + 5); };
+$("#fb").onclick = () => { const v = player(); if (v) { v.pause(); v.currentTime = Math.max(0, v.currentTime - 1 / 30); } };
+$("#ff").onclick = () => { const v = player(); if (v) { v.pause(); v.currentTime += 1 / 30; } };
+function setSpeed(s) {
+  speed = s;
+  document.querySelectorAll(".spd").forEach((b) => b.classList.toggle("on", +b.dataset.s === s));
+  const v = player(); if (v) v.playbackRate = s;
+}
+document.querySelectorAll(".spd").forEach((b) => (b.onclick = () => setSpeed(+b.dataset.s)));
+$("#loop").onclick = () => { loop = !loop; $("#loop").textContent = "Loop: " + (loop ? "on" : "off"); $("#loop").classList.toggle("on", loop); const v = player(); if (v) v.loop = loop; };
+
+// view buttons
+const toggleFocus = () => { document.body.classList.toggle("focus"); $("#focusBtn").classList.toggle("on"); };
+const goFull = () => { const el = $("#stage"); if (document.fullscreenElement) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); };
+$("#focusBtn").onclick = toggleFocus;
+$("#fsBtn").onclick = goFull;
+
+// keyboard
+window.addEventListener("keydown", (e) => {
+  if (["TEXTAREA", "INPUT"].includes(document.activeElement.tagName)) return;
+  const v = player();
+  const k = e.key;
+  if (k === " " && v) { e.preventDefault(); v.paused ? v.play() : v.pause(); }
+  else if (k === "ArrowRight" && v) v.currentTime += 5;
+  else if (k === "ArrowLeft" && v) v.currentTime -= 5;
+  else if (k === "," && v) { v.pause(); v.currentTime -= 1 / 30; }
+  else if (k === "." && v) { v.pause(); v.currentTime += 1 / 30; }
+  else if (k === "1") setSpeed(0.25);
+  else if (k === "2") setSpeed(0.5);
+  else if (k === "3") setSpeed(1);
+  else if (k === "4") setSpeed(2);
+  else if (k === "n") show((cur + 1) % Math.max(items.length, 1));
+  else if (k === "f") goFull();
+  else if (k === "s") toggleFocus();
+});
+
+// notes (saved in the browser)
+const notes = $("#notes");
+try { notes.value = localStorage.getItem("kl_notes") || DEFAULT_NOTES; } catch (e) { notes.value = DEFAULT_NOTES; }
+notes.addEventListener("input", () => { try { localStorage.setItem("kl_notes", notes.value); } catch (e) {} });
+
+$("#copy").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#cmd").textContent); $("#copy").textContent = "Copied"; }
+  catch (e) { $("#copy").textContent = "Select and copy it by hand"; }
+  setTimeout(() => ($("#copy").textContent = "Copy command"), 1500);
+};
+
+// load the default videos that exist next to this page
+DEFAULTS.forEach((d) => {
+  const v = document.createElement("video");
+  v.preload = "metadata";
+  v.onloadedmetadata = () => addItem({ title: d.title, url: d.src, kind: "video", dur: fmt(v.duration) });
+  v.onerror = () => {};
+  v.src = d.src;
+});
+render();
+</script>
+</body>
+</html>

@@ -194,18 +194,23 @@ def track_depth(depths, camera=CAMERA, icp="plane"):
     return poses
 
 
-def path_errors(est, truth):
-    """ATE (cm, after the best rigid alignment of the positions) and RPE (mm, deg) between consecutive frames."""
-    rel_truth = [np.linalg.inv(truth[0]) @ t for t in truth]   # both paths start at the identity
-    a = np.array([e[:3, 3] for e in est])
-    b = np.array([t[:3, 3] for t in rel_truth])
-
+def align_positions(a, b):
+    """Rigidly align estimated camera positions to ground truth."""
     # Horn / Kabsch: rotation R, translation t minimising |R a + t - b|
     ma, mb = a.mean(0), b.mean(0)
     U, _, Vt = np.linalg.svd((a - ma).T @ (b - mb))
     S = np.diag([1, 1, np.sign(np.linalg.det(Vt.T @ U.T))])
     R = Vt.T @ S @ U.T
-    ate = 100 * np.sqrt(np.mean(np.sum((a @ R.T + (mb - R @ ma) - b) ** 2, 1)))
+    return a @ R.T + (mb - R @ ma)
+
+
+def path_errors(est, truth):
+    """ATE (cm, after the best rigid alignment of the positions) and RPE (mm, deg) between consecutive frames."""
+    rel_truth = [np.linalg.inv(truth[0]) @ t for t in truth]   # both paths start at the identity
+    a = np.array([e[:3, 3] for e in est])
+    b = np.array([t[:3, 3] for t in rel_truth])
+    aligned = align_positions(a, b)
+    ate = 100 * np.sqrt(np.mean(np.sum((aligned - b) ** 2, 1)))
 
     dt, dr = [], []
     for e0, e1, t0, t1 in zip(est[:-1], est[1:], rel_truth[:-1], rel_truth[1:]):
@@ -213,7 +218,7 @@ def path_errors(est, truth):
         dt.append(np.linalg.norm(err[:3, 3]))
         dr.append(np.degrees(np.arccos(np.clip((np.trace(err[:3, :3]) - 1) / 2, -1, 1))))
     return {"ate_cm": ate, "rpe_mm": 1000 * np.sqrt(np.mean(np.square(dt))),
-            "rpe_deg": np.sqrt(np.mean(np.square(dr))), "aligned": a @ R.T + (mb - R @ ma), "truth": b}
+            "rpe_deg": np.sqrt(np.mean(np.square(dr))), "aligned": aligned, "truth": b}
 
 
 # ---------------------------------------------------------------------------
