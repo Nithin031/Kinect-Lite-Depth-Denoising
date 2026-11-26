@@ -4,6 +4,17 @@ A Kinect-type camera gives a distance for every pixel, but the depth image has t
 spikes (pixels with a very wrong distance) and holes (pixels with no distance).
 In this project we clean the depth images and check if the cleaning makes camera tracking (depth-only ICP) more accurate.
 
+## Live demo
+
+![Live demo: raw feed, raw depth, median-cleaned depth, camera paths and ICP error](assets/demo.gif)
+
+[Watch the full demo video](videos/video_demo_full.mp4). Each panel shows the raw camera feed, the noisy depth,
+the median-cleaned depth, the estimated camera paths against the true path, and the ICP tracking error over time.
+
+<img src="assets/frame_20.png" alt="Demo dashboard, early in the clip" width="100%">
+
+<img src="assets/frame_65.png" alt="Demo dashboard, later in the clip" width="100%">
+
 ## Short summary
 
 - Depth error: a simple 9x9 median filter halves the depth error (MAE 39 mm to 19 mm on ICL). The paper's filter barely changes it.
